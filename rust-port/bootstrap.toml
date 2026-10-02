@@ -1,0 +1,31 @@
+# QNX 6.5 Rust port build config.
+profile = "library"
+change-id = 999999
+
+[build]
+target = ["x86_64-unknown-linux-gnu", "i586-pc-nto-qnx650", "armv7-unknown-nto-qnx650"]
+
+[llvm]
+download-ci-llvm = false
+targets = "ARM;X86"
+experimental-targets = ""
+link-shared = true
+
+[rust]
+incremental = true
+
+[target.x86_64-unknown-linux-gnu]
+cc = "/usr/bin/gcc"
+cxx = "/usr/bin/g++"
+
+[target.i586-pc-nto-qnx650]
+cc = "i386-pc-nto-qnx6.5.0-gcc"
+cxx = "i386-pc-nto-qnx6.5.0-g++"
+ar = "/opt/gcc16/bin/i386-pc-nto-qnx6.5.0-ar"
+linker = "i386-pc-nto-qnx6.5.0-gcc"
+
+[target.armv7-unknown-nto-qnx650]
+cc = "arm-unknown-nto-qnx6.5.0eabi-gcc"
+cxx = "arm-unknown-nto-qnx6.5.0eabi-g++"
+ar = "/opt/gcc16/bin/arm-unknown-nto-qnx6.5.0eabi-ar"
+linker = "arm-unknown-nto-qnx6.5.0eabi-gcc"

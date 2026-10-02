@@ -52,6 +52,7 @@ runner/entrypoint.sh
 runner/start.sh
 runner/storage.conf
 rust-port/backtrace-qnx650.patch
+rust-port/bootstrap.toml
 rust-port/cc-qnx650.patch
 rust-port/libc-qnx650.patch
 rust-port/rust-qnx650.patch
