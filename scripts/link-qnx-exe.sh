@@ -7,7 +7,7 @@ args=()
 for arg do
     case "$arg" in
         -shared) echo 'This linker supports executables only.' >&2; exit 2 ;;
-        -lgcc_s|-lgcc_eh) args+=(-lgcc) ;;
+        -lgcc_s) args+=(-lgcc) ;;
         -static-libgcc) ;;
         *) args+=("$arg") ;;
     esac

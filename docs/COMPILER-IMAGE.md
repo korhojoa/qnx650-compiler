@@ -28,7 +28,8 @@ The GitHub workflow uses the complete source build.
 ## Native dependencies
 
 The image contains link-only declarations for `libc.so.3`, `libm.so.2`,
-`libsocket.so.3`, `libusbdi.so.2`, `libpps.so.1`, and `libasound.so.2`.
+`libsocket.so.3`, `libusbdi.so.2`, `libpps.so.1`, `libasound.so.2`, and
+`libz.so.2`.
 The assembler creates these declarations from the text files in `compiler-imports/`.
 They contain symbol names and ELF metadata. They contain no QNX runtime implementation.
 The resulting application uses the actual libraries on the QNX device.

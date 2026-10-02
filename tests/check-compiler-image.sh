@@ -43,7 +43,7 @@ QNX_LINK_UNDEFINED=allow rustc "$work/missing.rs" --edition 2024 --crate-type cd
     -C linker=/usr/local/bin/link-qnx-shared.sh -o "$work/plugin.so"
 readelf --dyn-syms -W "$work/plugin.so" | grep -q ' UND .*missing_qnx_runtime_import'
 # The other declared libraries link by name.
-for lib in usbdi pps asound; do
+for lib in usbdi pps asound z; do
     test -e "/opt/qnx-link-only/lib$lib.so"
 done
 # An executable links with the image's startup object through the Cargo

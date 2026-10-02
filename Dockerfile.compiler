@@ -46,7 +46,7 @@ ENV PATH=/opt/rust-qnx/bin:/opt/gcc11/bin:${PATH} \
 RUN arm-unknown-nto-qnx6.5.0eabi-as -march=armv7-a -meabi=5 \
       -o /usr/share/qnx-compiler/qnx-start.o /usr/share/qnx-compiler/qnx-start.S
 RUN mkdir -p /opt/qnx-link-only \
- && for lib in libc.so.3 libm.so.2 libsocket.so.3 libusbdi.so.2 libpps.so.1 libasound.so.2; do \
+ && for lib in libc.so.3 libm.so.2 libsocket.so.3 libusbdi.so.2 libpps.so.1 libasound.so.2 libz.so.2; do \
       build-import-library.sh "$lib" "/usr/share/qnx-compiler/imports/$lib.symbols" "/opt/qnx-link-only/$lib"; \
       ln -s "$lib" "/opt/qnx-link-only/${lib%.so.*}.so"; \
     done
