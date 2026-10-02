@@ -1,0 +1,215 @@
+# Host tools for the intermediate toolchain build.
+# The base contains the SDP and the source-built GNU toolchain.
+# This image stays local.
+ARG BASE=localhost/qnx650-build:base
+FROM ${BASE}
+
+# All host tools are in one layer. Their versions are not pinned: nothing
+# here ends up in a target binary. The QNX-facing inputs (binutils, gcc,
+# gcc-qnx, Python 2.7) are pinned and hash-verified; see sources.manifest.
+#
+# A new tool in this list rebuilds the layers below it (the fixups and the
+# Python 2.7 build). The SDP and the gcc toolchain live in the base image
+# and are not touched.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        `# core build tools` \
+        cmake ninja-build pkg-config autoconf automake libtool m4 \
+        binutils file git patch g++ bsdextrautils python3 \
+        xz-utils bzip2 unzip zip curl \
+        `# ccache: compiler cache for repeated large C++ builds` \
+        ccache \
+        `# gperf: hash generator for fontconfig code generation.` \
+        `# libdbus-glib-1-dev: host dbus-binding-tool for a cross build of` \
+        `# dbus-glib` \
+        gperf libdbus-glib-1-dev \
+        `# ruby: JavaScriptCore offlineasm code generation` \
+        ruby \
+        `# libglib2.0-dev-bin: host glib-compile-resources for GResource` \
+        `# bundles (the target copy is an ARM binary)` \
+        libglib2.0-dev-bin \
+        `# meson for meson-only releases of GLib stack libraries.` \
+        `# gettext, intltool, XML::Parser, gtk-doc-tools, texinfo and` \
+        `# libltdl-dev serve autotools ports. sqlite3 seeds databases.` \
+        meson texinfo gettext intltool libxml-parser-perl \
+        gtk-doc-tools libltdl-dev sqlite3 \
+        `# unifdef: some CMake projects require it at configure time` \
+        unifdef \
+        `# gcc-multilib: 32-bit host multilib, HOST_CC="gcc -m32" when a` \
+        `# port needs a host compiler with the target word size` \
+        gcc-multilib \
+        `# scons: build system of some C++ ports` \
+        scons && \
+    rm -rf /var/lib/apt/lists/* && \
+    scons --version
+
+# QNX's libc headers (limits.h -> sys/platform.h) predefine the guard macros
+# (_GCC_PTRDIFF_T etc.) that make GCC's internal stddef.h/stdarg.h skip their
+# typedefs, so e.g. "#include <limits.h>" before "#include <stddef.h>" loses
+# ptrdiff_t. QNX's own GCC 4.4 fixes this by wrapping both internal headers in
+# "#ifdef __QNXNTO__ -> #include_next" (defer to the sysroot header, which
+# knows the guard dance). Apply the same wrapper to the GCC 11 toolchain.
+# TODO: fold into the gcc patches in ./patches for the next toolchain rebuild.
+# QNX's stddef.h predates C11, so the deferring wrapper must supply
+# max_align_t itself or C++11's <cstddef> breaks.
+RUN set -e; \
+    for h in stddef.h stdarg.h; do \
+        f=/opt/gcc11/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/11.2.0/include/$h; \
+        grep -q __QNXNTO__ "$f" && continue; \
+        { printf '#ifdef __QNXNTO__\n#include_next <%s>\n' "$h"; \
+          if [ "$h" = stddef.h ]; then \
+            printf '#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) \\\n'; \
+            printf '    || (defined(__cplusplus) && __cplusplus >= 201103L)\n'; \
+            printf '#ifndef _GCC_MAX_ALIGN_T\n#define _GCC_MAX_ALIGN_T\n'; \
+            printf 'typedef struct {\n'; \
+            printf '  long long __max_align_ll __attribute__((__aligned__(__alignof__(long long))));\n'; \
+            printf '  long double __max_align_ld __attribute__((__aligned__(__alignof__(long double))));\n'; \
+            printf '} max_align_t;\n#endif\n#endif\n'; \
+          fi; \
+          printf '#else\n'; \
+          cat "$f"; \
+          printf '\n#endif /* __QNXNTO__ */\n'; } > "$f.new"; \
+        mv "$f.new" "$f"; \
+    done
+
+# QNX 6.5's libm has the C99 functions (log2, hypotf, exp2, ...) but
+# sys/platform.h only exposes their declarations when __STDC_VERSION__ says
+# C99 -- a macro C++ never defines -- so every C++ TU loses them. Widen the
+# guard: C++ with _QNX_SOURCE (which our CMake toolchain always defines) also
+# gets the C99 declarations.
+RUN f=/opt/qnx650/target/qnx6/usr/include/sys/platform.h && \
+    sed -i 's@^#if __STDC_VERSION__-0 >= 199901$@#if __STDC_VERSION__-0 >= 199901 || (defined(__cplusplus) \&\& defined(_QNX_SOURCE))@' "$f" && \
+    grep -q 'defined(__cplusplus) && defined(_QNX_SOURCE)' "$f"
+
+# With C99 visible to C++ (above), QNX math.h's C++ branch defines proper
+# std:: inline/template classification functions (fpclassify, isnan, ...) but
+# then *also* wraps them in C99 function-style macros, which break qualified
+# std::isnan(...) calls everywhere (e.g. the fmt library). Replace those 12
+# macros with using-declarations so both unqualified and std:: uses work.
+RUN f=/opt/qnx650/target/qnx6/usr/include/math.h && \
+    sed -i -E 's@^[[:space:]]*#define (fpclassify|signbit|isfinite|isinf|isnan|isnormal|isgreater|isgreaterequal|isless|islessequal|islessgreater|isunordered)\(x(, y)?\)[[:space:]]+\(_CSTD .*@  using _CSTD \1;@' "$f" && \
+    grep -q '^  using _CSTD isnan;' "$f" && \
+    ! grep -qE '#define isnan\(x\)[[:space:]]+\(_CSTD' "$f"
+
+# QNX 6.5's libc does provide the C99 stdlib/stdio functions libstdc++ needs
+# for std::stoi/stof/... and std::to_string (strtof, strtoll, vsnprintf, ...;
+# verified in libc.so.3), but the GCC 11 configure probe concluded otherwise.
+# Enable those blocks -- only under _QNX_SOURCE, since without it the QNX
+# headers hide the underlying C99 declarations and <cstdlib> would break.
+RUN f=/opt/gcc11/arm-unknown-nto-qnx6.5.0eabi/include/c++/11.2.0/arm-unknown-nto-qnx6.5.0eabi/bits/c++config.h && \
+    for m in _GLIBCXX11_USE_C99_STDLIB _GLIBCXX98_USE_C99_STDLIB \
+             _GLIBCXX11_USE_C99_STDIO  _GLIBCXX98_USE_C99_STDIO; do \
+        sed -i "s@^/\* #undef $m \*/\$@#ifdef _QNX_SOURCE\n# define $m 1\n#endif@" "$f"; \
+    done && \
+    grep -q '# define _GLIBCXX11_USE_C99_STDLIB 1' "$f" && \
+    grep -q '# define _GLIBCXX11_USE_C99_STDIO 1' "$f"
+
+# stdlib.h's _STD_USING re-export block covers the C89 names but not the C99
+# ones; lldiv_t and strtold exist only as std:: members, which breaks
+# <cstdlib>'s "using ::lldiv_t"/"using ::strtold". Re-export them globally
+# like their siblings (both are declared unconditionally in C++ mode).
+RUN f=/opt/qnx650/target/qnx6/usr/include/stdlib.h && \
+    sed -i 's@^using _CSTD wcstombs; using _CSTD wctomb;$@using _CSTD wcstombs; using _CSTD wctomb;\nusing _CSTD lldiv_t; using _CSTD strtold;@' "$f" && \
+    grep -q 'using _CSTD lldiv_t' "$f"
+
+# CPython 2.7.18 at /opt/python2, for code generators that need Python 2.
+# Ubuntu has no python2 package. A port that needs it puts a `python` stub
+# on PATH that points here. Own layer: never invalidates the ones above.
+COPY Python-2.7.18.tgz /tmp/
+# CC -std=gnu11: the host gcc 15 defaults to C23, which rejects CPython
+# 2.7's implicit declarations and K&R-style code.
+RUN cd /tmp && tar xf Python-2.7.18.tgz && cd Python-2.7.18 && \
+    ./configure --prefix=/opt/python2 --without-ensurepip CC="gcc -std=gnu11" >/dev/null && \
+    make -j"$(nproc)" >/dev/null 2>&1 && make install >/dev/null && \
+    cd / && rm -rf /tmp/Python-2.7.18 /tmp/Python-2.7.18.tgz && \
+    /opt/python2/bin/python2 -c "import sys; print(sys.version)"
+
+# QNX 6.5 locale.h: the Dinkumware C++ inline localeconv() redeclares the
+# extern-C prototype with C++ linkage -- GCC >= 5 rejects the mismatch (bare
+# <clocale> compiles, but once <sys/cdefs.h> has set _STD_USING both decls
+# land in namespace std and the conflict is fatal; ICU 70's lstmbe.cpp hits
+# it through the <ctgmath>/<ios> chain).
+# Rename the inline to an unused name: C++ callers then resolve localeconv
+# to the real libc.so.3 symbol (exported -- checked), same as every other
+# platform; the _STD_USING tail export `using _CSTD localeconv` still works.
+# Own layer: never invalidates the ones above.
+RUN sed -i 's@^inline struct lconv \*localeconv(void)@inline struct lconv *__qnx_gcc11_unused_localeconv(void)@' \
+        /opt/qnx650/target/qnx6/usr/include/locale.h && \
+    grep -q "__qnx_gcc11_unused_localeconv" /opt/qnx650/target/qnx6/usr/include/locale.h
+
+# QNX 6.5 pthread.h: PTHREAD_MUTEX_INITIALIZER puts _NTO_SYNC_NONRECURSIVE
+# (0x80000000, unsigned) into the int __count of struct _sync. In C++, this
+# is a narrowing error where the initializer is list-initialization, and
+# GCC 16 shows it from system headers. Thus these fail to compile:
+# `pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;`, PTHREAD_ONCE_INIT and
+# PTHREAD_RWLOCK_INITIALIZER (std::shared_mutex uses the last one).
+# Cast the value to int, as the header does for _NTO_SYNC_COND in
+# PTHREAD_COND_INITIALIZER. The bits do not change. C is not affected.
+# Own layer: never invalidates the ones above.
+RUN f=/opt/qnx650/target/qnx6/usr/include/pthread.h && \
+    sed -i -E \
+        -e 's@^(#define PTHREAD_MUTEX_INITIALIZER[[:space:]]+)\{ _NTO_SYNC_NONRECURSIVE, @\1{ (int)_NTO_SYNC_NONRECURSIVE, @' \
+        -e 's@^(#define PTHREAD_MUTEX_WAKEUP_INITIALIZER[[:space:]]+)\{ _NTO_SYNC_NONRECURSIVE\|_NTO_SYNC_WAKEUP, @\1{ (int)(_NTO_SYNC_NONRECURSIVE|_NTO_SYNC_WAKEUP), @' \
+        "$f" && \
+    grep -qE '^#define PTHREAD_MUTEX_INITIALIZER[[:space:]]+\{ \(int\)_NTO_SYNC_NONRECURSIVE, ' "$f" && \
+    grep -qE '^#define PTHREAD_MUTEX_WAKEUP_INITIALIZER[[:space:]]+\{ \(int\)\(_NTO_SYNC_NONRECURSIVE\|_NTO_SYNC_WAKEUP\), ' "$f" && \
+    ! grep -qE '^#define PTHREAD_MUTEX_(WAKEUP_)?INITIALIZER[[:space:]]+\{ _NTO_SYNC_NONRECURSIVE' "$f"
+
+# meson >= 1.4: glib 2.88 requires meson_version >= 1.4.0, and the Ubuntu
+# package can be older. Meson is pure python -- install the release tarball
+# to /opt and shadow /usr/bin/meson via /usr/local/bin (earlier on PATH).
+# Pinned like every other tool. Own layer: never invalidates the ones above.
+RUN curl -fsSL -o /tmp/meson.tar.gz \
+        https://github.com/mesonbuild/meson/releases/download/1.8.2/meson-1.8.2.tar.gz && \
+    echo 'c105816d8158c76b72adcb9ff60297719096da7d07f6b1f000fd8c013cd387af  /tmp/meson.tar.gz' | sha256sum -c - && \
+    tar xf /tmp/meson.tar.gz -C /opt && rm /tmp/meson.tar.gz && \
+    printf '#!/bin/sh\nexec python3 /opt/meson-1.8.2/meson.py "$@"\n' \
+        > /usr/local/bin/meson && \
+    chmod +x /usr/local/bin/meson && \
+    meson --version | grep -qx 1.8.2
+
+# Backport the gcc16 .ARM.exidx fix to gcc11: binutils' armnto
+# ldscript has no .ARM.exidx/.ARM.extab rules, so PT_ARM_EXIDX covers almost
+# none of the unwind tables and EVERY C++ throw in a gcc11 ARM binary aborts
+# (latent -- found during the gcc16 port; the unwinder lives in QNX libc.so.3
+# and reads PT_ARM_EXIDX). exidx-merge.ld merges the orphans (armelf.x
+# rules); the driver specs file (COMPLETE -dumpspecs dump -- a partial file
+# silently resets builtin specs) adds it to every link. The script verifies
+# a throw/catch binary gets ONE fully-covered .ARM.exidx or the image build
+# fails. NB: binaries built BEFORE this layer keep broken unwind until
+# relinked. Own layer: never invalidates the ones above.
+COPY toolchain-fixups/exidx-merge.ld /opt/gcc11/arm-unknown-nto-qnx6.5.0eabi/lib/exidx-merge.ld
+COPY toolchain-fixups/gcc11-exidx-specs.py /tmp/gcc11-exidx-specs.py
+RUN python3 /tmp/gcc11-exidx-specs.py && rm /tmp/gcc11-exidx-specs.py
+
+# gcc11 target libs are built with -mno-unaligned-access by the pinned-source
+# gcc-builder stage in Dockerfile: the supported ARM targets trap unaligned
+# access (SCTLR.A=1) but the toolchain's own libstdc++/libgcc were built
+# with GCC's default -munaligned-access -- seen on a target as SIGBUS in
+# _ZSt11_Hash_bytes' word-at-a-time loop; no project flag can fix an
+# archive. The builder uses the same configure and gcc4-compatible
+# ABI and appends all libtool-dropped compatibility objects before installing.
+# The specs script also makes -mno-unaligned-access the DRIVER DEFAULT
+# (*cc1/*cc1plus; explicit -munaligned-access opts back in) and self-verifies
+# byte-store merging is gone + _Hash_bytes is byte-wise. Details:
+# gcc11-fixups/README.md. Relink wave: combine with the exidx relink wave.
+COPY gcc11-fixups/gcc11-unaligned-specs.py /tmp/gcc11-unaligned-specs.py
+RUN python3 /tmp/gcc11-unaligned-specs.py && rm /tmp/gcc11-unaligned-specs.py
+
+
+# gcc11 *lib spec: restore the stock-QNX static-libc second pass.
+# QNX keeps 100+ libc functions (regcomp/glob/wordexp/scandir/...) ONLY in
+# libc.a/libcS.a -- libc.so.3 does not export them. Stock 4.4 links
+# "-lc -Bstatic -lc"; the qnx_11_2 fork's LIB_SPEC lost the second pass, so
+# those ports failed to link on gcc11. The script appends -l:libc.a (-lcS
+# for pie) to the exe branch of *lib for BOTH targets (installs x86's first
+# specs file), and self-verifies: regcomp/glob link statically with
+# libc.so.3 still dynamic, shared links unchanged (no TEXTREL), ARM
+# exidx+unaligned edits intact. Runs LAST -- it edits the ARM dump in place.
+# A comparison with the luka-dev/qnx65-armv7-toolchain repository, which has
+# no license file, showed the gap. The fix follows the stock 4.4 spec, not
+# that code.
+# On an ARM-only base (Dockerfile.sdp-frida, ENV QNX_TARGETS=arm), the script
+# skips the x86 target. It does not stop on the missing x86 driver.
+COPY toolchain-fixups/gcc11-staticlibc-specs.py /tmp/gcc11-staticlibc-specs.py
+RUN python3 /tmp/gcc11-staticlibc-specs.py && rm /tmp/gcc11-staticlibc-specs.py

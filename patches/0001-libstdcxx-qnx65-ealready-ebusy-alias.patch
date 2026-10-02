@@ -1,0 +1,13 @@
+--- a/libstdc++-v3/src/c++11/system_error.cc
++++ b/libstdc++-v3/src/c++11/system_error.cc
+@@ -98,7 +98,9 @@
+ #ifdef EAGAIN
+       case EAGAIN:
+ #endif
+-#ifdef EALREADY
++// QNX <= 6.5 defines EALREADY as an alias of EBUSY (binary compat); avoid a
++// duplicate case label.
++#if defined(EALREADY) && (!defined(EBUSY) || EALREADY != EBUSY)
+       case EALREADY:
+ #endif
+ #ifdef EBADF

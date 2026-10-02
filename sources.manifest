@@ -1,0 +1,18 @@
+# Direct inputs for the compiler and runner recipes.
+# name | kind | path | revision or SHA-256 | upstream | mirror
+
+binutils-2.42                | tar   | binutils-2.42.tar.xz                | f6e4d41fd5fc778b06b7891457b3620da5ecea1006c6a4a41ae998109f85a800 | https://ftp.gnu.org/gnu/binutils/binutils-2.42.tar.xz | -
+gcc-16.1.0                   | tar   | gcc-16.1.0.tar.xz                   | 50efb4d94c3397aff3b0d61a5abd748b4dd31d9d3f2ab7be05b171d36a510f79 | https://ftp.gnu.org/gnu/gcc/gcc-16.1.0/gcc-16.1.0.tar.xz | -
+Python-2.7.18                | tar   | Python-2.7.18.tgz                   | da3080e3b488f648a3d7a4560ddee895284c3380b11d6de75edb986526b9a814 | https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz | -
+meson-1.8.2                  | tar   | meson-1.8.2.tar.gz                  | c105816d8158c76b72adcb9ff60297719096da7d07f6b1f000fd8c013cd387af | https://github.com/mesonbuild/meson/releases/download/1.8.2/meson-1.8.2.tar.gz | -
+gcc-qnx-a07570b6             | tar   | gcc-qnx.tar.gz                      | 130014580b52f292df5958461ccea39d7aa9d3f9e02a7f13a309e9ada6302518 | https://github.com/bigunclemax/gcc/archive/a07570b654eb6e70adaf5af813b73799d94c9df8.tar.gz | -
+gcc-qnx                      | git   | (fetched as an archive, not cloned) | a07570b654eb6e70adaf5af813b73799d94c9df8                         | https://github.com/bigunclemax/gcc.git | -
+ubuntu-base                  | image | (FROM in Dockerfile)                | sha256:678c6550cc43645e08669028bc177f50be4e7c5b8cca677067b1914d4afc7a03 | docker.io/library/ubuntu:26.04 | -
+frida-qnx-tools              | image | (FROM in Dockerfile.sdp-frida)      | sha256:65f1864ebbff521bcc6b2afd234d5679920b9466b4ba1d57be5d8f131993bfe2 | ghcr.io/frida/qnx-tools:latest | -
+rust-1.94.1-qnx650           | git   | rust-work/rust                       | e408947bfd200af42db322daf0fadfe7e26d3bd1                         | https://github.com/rust-lang/rust.git | -
+rust-libc-0.2.189-qnx650     | git   | rust-work/libc                       | ef0906e20828777175f65caa7e681a0ce33c559a                         | https://github.com/rust-lang/libc.git | -
+cc-rs-1.4.3-qnx650           | git   | rust-work/cc-rs                      | 3c4ab883616b373c0287319d1a2f237aad0c79a0                         | https://github.com/rust-lang/cc-rs.git | -
+backtrace-rust-submodule     | git   | rust-work/rust/library/backtrace     | b65ab935fb2e0d59dba8966ffca09c9cc5a5f57c                         | https://github.com/rust-lang/backtrace-rs.git | -
+qnxsdp-6.5.0-dvd             | tar   | qnxsdp-6.5.0-201007091524-dvd.iso   | c8701b45ae91b9ef760b66a9487f0397df2be8b4f7c40dd2851226db68045db8 | (QNX SDP 6.5.0 DVD, not downloadable)  | -
+github-runner-2.337.0 | tar | (GitHub runner archive) | 70920811a4f8ad4328818682bca5c6469c1c942fab52448868071d0063816613 | https://github.com/actions/runner/releases/download/v2.337.0/actions-runner-linux-x64-2.337.0.tar.gz | -
+github-runner-ubuntu-base | image | (FROM in runner/Dockerfile) | sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebffbc7092d90 | docker.io/library/ubuntu:24.04 | -

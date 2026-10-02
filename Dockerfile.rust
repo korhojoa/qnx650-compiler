@@ -1,0 +1,193 @@
+# QNX 6.5.0 Rust cross-toolchain image -- multi-stage.
+#
+# A `rust-builder` stage compiles rustc + std for the QNX targets from source
+# and assembles its installation prefix in a separate stage.
+# All the build cruft (the multi-GB rust checkout, x.py build tree, downloaded
+# stage0 and the LLVM build) stays in the discarded builder layer.
+#
+# LLVM: the builder compiles LLVM from the pinned llvm-project submodule, with
+# the ARM and X86 backends only. The CI LLVM for this Rust commit is no longer
+# available for download, and the release has no rust-dev package.
+# link-shared=true keeps the libLLVM.so.* file that the dist step copies.
+#
+#   podman build -f Dockerfile.rust -t qnx650-build:rust .
+#
+# Base is the source-built GCC 16 image. It provides /opt/gcc16, reusing
+# binutils from /opt/gcc11 and the QNX sysroot.
+#
+# Keep the source pins equal to their entries in sources.manifest.
+ARG BASE=localhost/qnx650-build:gcc16
+
+# ------------------------------- builder -------------------------------
+FROM ${BASE} AS rust-builder
+
+# The QNX targets to build std for: "arm x86" (default) or "arm". An ARM-only
+# base (Dockerfile.sdp-frida) sets ENV QNX_TARGETS=arm. That ENV has priority
+# over the build argument. Thus that base cannot build for i586.
+ARG QNX_TARGETS=""
+ARG BUILD_JOBS=4
+
+# Fetch pinned source commits. Do not substitute mutable tags.
+ARG LIBC_COMMIT=ef0906e20828777175f65caa7e681a0ce33c559a
+ARG CCRS_COMMIT=3c4ab883616b373c0287319d1a2f237aad0c79a0
+ARG RUST_COMMIT=e408947bfd200af42db322daf0fadfe7e26d3bd1
+
+# The tracked recipe inputs (patches + target JSONs), COPYed rather than mounted.
+COPY rust-port /work/rust-port
+WORKDIR /work/rust-work
+
+# sources: pinned clones + tracked patches. blob:none keeps the clones light
+# while still allowing any sha (matches the driver).
+RUN set -eux; \
+    git clone --filter=blob:none https://github.com/rust-lang/libc.git libc; \
+    git -C libc -c advice.detachedHead=false checkout --detach ${LIBC_COMMIT}; \
+    git -C libc apply /work/rust-port/libc-qnx650.patch; \
+    git clone --filter=blob:none https://github.com/rust-lang/cc-rs.git cc-rs; \
+    git -C cc-rs -c advice.detachedHead=false checkout --detach ${CCRS_COMMIT}; \
+    git -C cc-rs apply /work/rust-port/cc-qnx650.patch; \
+    git clone --filter=blob:none https://github.com/rust-lang/rust.git rust; \
+    git -C rust -c advice.detachedHead=false checkout --detach ${RUST_COMMIT}; \
+    git -C rust apply /work/rust-port/rust-qnx650.patch; \
+    git -C rust submodule update --init library/backtrace; \
+    ( cd rust/library/backtrace && git apply /work/rust-port/backtrace-qnx650.patch )
+
+# CRITICAL: init library/backtrace to its pinned commit BEFORE applying the
+# patch above. A fresh `git clone` leaves submodules uninitialised, and x.py
+# would then clone library/backtrace fresh at build time (clean b65ab935),
+# discarding the patch and producing a std that references dl_iterate_phdr /
+# _Unwind_GetIP (absent on QNX 6.5) -> anything linking std backtrace fails.
+# With the submodule already at the pinned commit + the patch applied (dirty),
+# x.py preserves the initialized and patched submodule. The local
+# workspace is in. This is the difference between a reproducible-and-correct
+# build and a subtly-broken one.
+
+# = write_bootstrap_toml() (verbatim)
+RUN cat > /work/rust-work/rust/bootstrap.toml <<'EOF'
+# QNX 6.5 Rust port build config.
+profile = "library"
+change-id = 999999
+
+[build]
+target = ["x86_64-unknown-linux-gnu", "i586-pc-nto-qnx650", "armv7-unknown-nto-qnx650"]
+
+[llvm]
+download-ci-llvm = false
+targets = "ARM;X86"
+experimental-targets = ""
+link-shared = true
+
+[rust]
+incremental = true
+
+[target.x86_64-unknown-linux-gnu]
+cc = "/usr/bin/gcc"
+cxx = "/usr/bin/g++"
+
+[target.i586-pc-nto-qnx650]
+cc = "i386-pc-nto-qnx6.5.0-gcc"
+cxx = "i386-pc-nto-qnx6.5.0-g++"
+ar = "/opt/gcc16/bin/i386-pc-nto-qnx6.5.0-ar"
+linker = "i386-pc-nto-qnx6.5.0-gcc"
+
+[target.armv7-unknown-nto-qnx650]
+cc = "arm-unknown-nto-qnx6.5.0eabi-gcc"
+cxx = "arm-unknown-nto-qnx6.5.0eabi-g++"
+ar = "/opt/gcc16/bin/arm-unknown-nto-qnx6.5.0eabi-ar"
+linker = "arm-unknown-nto-qnx6.5.0eabi-gcc"
+EOF
+
+# ARM-only build: remove the i586 target from the configuration above. Its
+# [target.i586-pc-nto-qnx650] block is exactly the lines that name i586/i386.
+RUN set -eux; \
+    case " ${QNX_TARGETS:-arm x86} " in \
+        *" x86 "*) ;; \
+        *) sed -i -e 's/"i586-pc-nto-qnx650", //' \
+                  -e '/i586-pc-nto-qnx650\|i386-pc-nto-qnx6\.5\.0/d' \
+                  /work/rust-work/rust/bootstrap.toml; \
+           ! grep -q i586 /work/rust-work/rust/bootstrap.toml ;; \
+    esac
+
+# = std(): x.py stage-1 library build. GCC 16 first on PATH (and the SDP
+# host-tools dir dropped so its cc can't shadow the host compiler); stage0 sanity
+# skipped (it does not know the new targets); ARM cc-rs C gets -mno-unaligned-access.
+WORKDIR /work/rust-work/rust
+ENV PATH=/opt/gcc16/bin:/opt/gcc11/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    CARGO_HOME=/work/rust-work/xpy-cargo-home \
+    BOOTSTRAP_SKIP_TARGET_SANITY=1 \
+    CFLAGS_armv7_unknown_nto_qnx650="-mno-unaligned-access -O2"
+RUN git config --global --add safe.directory '*' && ./x.py build --jobs ${BUILD_JOBS} --stage 1 library
+
+# Make the notices for this source tree and its dependencies.
+COPY compiler-notices/copyright-path-deps.patch /tmp/copyright-path-deps.patch
+RUN git apply /tmp/copyright-path-deps.patch \
+ && ./x.py run --jobs ${BUILD_JOBS} generate-copyright
+
+# = dist(): assemble a relocatable prefix (rustc + cargo + the three sysroots).
+RUN set -eux; \
+    S1=build/x86_64-unknown-linux-gnu/stage1; \
+    S0=build/x86_64-unknown-linux-gnu/stage0; \
+    out=/opt/rust-qnx; \
+    rm -rf "$out"; mkdir -p "$out/bin" "$out/lib/rustlib"; \
+    cp -a "$S1/bin/rustc" "$out/bin/"; \
+    cp -a "$S0/bin/cargo" "$out/bin/"; \
+    cp -a "$S1"/lib/*.so "$S1"/lib/*.so.* "$out/lib/"; \
+    triples=x86_64-unknown-linux-gnu; \
+    for t in ${QNX_TARGETS:-arm x86}; do \
+        case "$t" in \
+            arm) triples="$triples armv7-unknown-nto-qnx650" ;; \
+            x86) triples="$triples i586-pc-nto-qnx650" ;; \
+            *) echo "unknown QNX target: $t" >&2; exit 1 ;; \
+        esac; \
+    done; \
+    for t in $triples; do \
+        cp -a "$S1/lib/rustlib/$t" "$out/lib/rustlib/"; \
+    done; \
+    cp -a "$S1/lib/rustlib/components" "$out/lib/rustlib/" 2>/dev/null || true; \
+    mkdir -p "$out/share/doc/rust" "$out/share/doc/cargo"; \
+    cp -a build/COPYRIGHT.html build/COPYRIGHT-library.html \
+        COPYRIGHT LICENSE-APACHE LICENSE-MIT LICENSES "$out/share/doc/rust/"; \
+    cp -a "$S0/share/doc/cargo/." "$out/share/doc/cargo/"; \
+    cp "$S0/share/doc/rust/COPYRIGHT.html" "$out/share/doc/cargo/BOOTSTRAP-COPYRIGHT.html"; \
+    cp src/llvm-project/llvm/LICENSE.TXT "$out/share/doc/rust/LLVM-LICENSE.txt"; \
+    { printf 'rust '; git rev-parse HEAD; \
+      printf 'libc '; git -C ../libc rev-parse HEAD; \
+      printf 'cc-rs '; git -C ../cc-rs rev-parse HEAD; \
+      printf 'backtrace '; git -C library/backtrace rev-parse HEAD; \
+      printf 'llvm '; git -C src/llvm-project rev-parse HEAD; \
+    } > "$out/share/doc/rust/SOURCES.txt"; \
+    sha256sum /work/rust-port/rust-qnx650.patch /work/rust-port/libc-qnx650.patch \
+        /work/rust-port/cc-qnx650.patch /work/rust-port/backtrace-qnx650.patch \
+        /tmp/copyright-path-deps.patch \
+        | sed -e 's|/work/rust-port/|rust-port/|' \
+              -e 's|/tmp/|compiler-notices/|' \
+        > "$out/share/doc/rust/PATCHES.sha256"
+
+# -------------------------------- final --------------------------------
+# Clean tooling image + the toolchain only. rustc/cargo relocate via
+# $ORIGIN/../lib, so bin/ + lib/ as siblings under /opt/rust-qnx is enough.
+FROM ${BASE} AS rust
+# CI tools on top of the toolchain: nodejs runs JavaScript CI actions, and
+# openssh-client copies test binaries to a QNX target. git is in the base.
+# This is the final layer, so it does not invalidate the cached builder stage.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends nodejs openssh-client ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+COPY --from=rust-builder /opt/rust-qnx /opt/rust-qnx
+ENV PATH=/opt/rust-qnx/bin:/opt/gcc16/bin:${PATH}
+# Host builds (build scripts, proc macros) must use the host GCC. The SDP
+# host-tools directory in PATH has a cc that is QNX qcc, and cargo and cc-rs
+# find that cc first. These variables name the host tools directly.
+ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=/usr/bin/gcc \
+    CC_x86_64_unknown_linux_gnu=/usr/bin/gcc \
+    CXX_x86_64_unknown_linux_gnu=/usr/bin/g++
+# Fail the build if the toolchain didn't come out usable. The crate with a
+# build script checks the host linker above.
+RUN node --version \
+ && rustc --version \
+ && rustc --print target-list | grep -q armv7-unknown-nto-qnx650 \
+ && cargo --version \
+ && cargo new -q --vcs none --name buildscript /tmp/buildscript \
+ && echo 'fn main() {}' > /tmp/buildscript/build.rs \
+ && cargo build -q --offline --manifest-path /tmp/buildscript/Cargo.toml \
+        --target armv7-unknown-nto-qnx650 \
+ && rm -rf /tmp/buildscript

@@ -1,0 +1,52 @@
+name: compiler image
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Upload the checked compiler image to GHCR for public use
+        type: boolean
+        default: false
+      runner:
+        description: Runner label with enough storage for the source build
+        type: string
+        default: qnx650-compiler
+
+permissions:
+  contents: read
+
+jobs:
+  compiler:
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 360
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Inspect the runner
+        run: |
+          podman --version
+          df -h .
+          free -h
+          storage=$(podman info --format '{{.Store.GraphRoot}}')
+          mkdir -p "$storage"
+          available=$(df -Pk "$storage" | awk 'NR == 2 {print $4}')
+          if [ "$available" -lt 52428800 ]; then
+            echo 'The full source build requires 50 GiB of free build storage.' >&2
+            echo 'Select a runner with more storage.' >&2
+            exit 1
+          fi
+      - name: Assemble and test the compiler image
+        run: scripts/build-compiler-image.sh
+      - name: Upload the compiler image
+        if: inputs.publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_OWNER: ${{ github.repository_owner }}
+          REGISTRY_ACTOR: ${{ github.actor }}
+          SOURCE_REVISION: ${{ github.sha }}
+        run: scripts/publish-compiler.sh

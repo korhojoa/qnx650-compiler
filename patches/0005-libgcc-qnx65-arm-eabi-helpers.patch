@@ -1,0 +1,95 @@
+--- a/libgcc/config/arm/sfp-machine.h
++++ b/libgcc/config/arm/sfp-machine.h
+@@ -67,7 +67,7 @@
+ # define _strong_alias(name, aliasname) \
+   extern __typeof (name) aliasname __attribute__ ((alias (#name)));
+ 
+-#if  0
++#ifdef __ARM_EABI__
+ /* Rename functions to their EABI names.  */
+ /* The comparison functions need wrappers for EABI semantics, so
+    leave them unmolested.  */
+--- a/libgcc/config/arm/t-arm
++++ b/libgcc/config/arm/t-arm
+@@ -1,7 +1,7 @@
+ LIB1ASMSRC = arm/lib1funcs.S
+ LIB1ASMFUNCS = _thumb1_case_sqi _thumb1_case_uqi _thumb1_case_shi \
+ 	_thumb1_case_uhi _thumb1_case_si _speculation_barrier
+-LIB2ADD += $(srcdir)/udivmodsi4.c $(srcdir)/udivmod.c $(srcdir)/divmod.c
++
+ HAVE_CMSE:=$(findstring __ARM_FEATURE_CMSE,$(shell $(gcc_compile_bare) -dM -E - </dev/null))
+ ifeq ($(shell $(gcc_compile_bare) -E -mcmse - </dev/null >/dev/null 2>/dev/null; echo $$?),0)
+ CMSE_OPTS:=-mcmse
+--- a/libgcc/config/arm/t-nto
++++ b/libgcc/config/arm/t-nto
+@@ -1,8 +1,13 @@
+ CRTSTUFF_T_CFLAGS = -fno-omit-frame-pointer $(PICFLAG) -DCRTSTUFFS_O
+ SHLIB_LDFLAGS = -Wl,--soname=$(SHLIB_SONAME)
+ 
++# QNX 6.5: libgcc.a must contain the ARM EABI helpers (__aeabi_uidiv,
++# __aeabi_idiv, __aeabi_uldivmod and more), as the SDP GCC 4.4.2 libgcc.a
++# does. libc.so.3 exports them. libc.a only calls them, thus a -static
++# link has no other definition. lib1funcs.S has no L_dvmd_nto section.
++# _dvmd_tls gives the weak __aeabi_idiv0 and __aeabi_ldiv0 hooks.
+ LIB1ASMSRC = arm/lib1funcs.S
+-LIB1ASMFUNCS += _udivsi3 _divsi3 _umodsi3 _modsi3 _dvmd_nto _bb_init_func \
++LIB1ASMFUNCS += _udivsi3 _divsi3 _umodsi3 _modsi3 _dvmd_tls _bb_init_func \
+ 		_call_via_rX _interwork_call_via_rX _lshrdi3 _ashrdi3 \
+ 		_ashldi3 _clzsi2 _clzdi2  _arm_negdf2 _arm_addsubdf3 \
+ 		_arm_muldivdf3 _arm_cmpdf2 _arm_unorddf2 _arm_fixdfsi \
+--- a/libgcc/config/arm/t-softfp
++++ b/libgcc/config/arm/t-softfp
+@@ -1,3 +1,2 @@
+-softfp_wrap_start := '\#if 1'
++softfp_wrap_start := '\#if !__ARM_ARCH_ISA_ARM && __ARM_ARCH_ISA_THUMB == 1'
+ softfp_wrap_end := '\#endif'
+-softfp_exclude_libgcc2 := n
+--- a/libgcc/config.host
++++ b/libgcc/config.host
+@@ -496,7 +496,10 @@
+ arm*-*-qnx*eabi*)
+         tmake_file="${tmake_file} arm/t-arm t-slibgcc arm/t-nto"
+         tmake_file="${tmake_file} arm/t-bpabi"
+-        tmake_file="${tmake_file} t-softfp-sfdf arm/t-softfp t-softfp"
++        # Use t-softfp-excl, as arm*-*-linux* does. It keeps the libgcc2.c
++        # conversions between float and 64-bit int (__fixdfdi and more).
++        # In ARM mode, soft-fp does not build them.
++        tmake_file="${tmake_file} t-softfp-sfdf t-softfp-excl arm/t-softfp t-softfp"
+         tm_file="$tm_file arm/bpabi-lib.h"
+         unwind_header=config/arm/unwind-arm.h
+         ;;
+--- a/libgcc/Makefile.in
++++ b/libgcc/Makefile.in
+@@ -471,12 +471,30 @@
+ # Remove any objects from lib2funcs and LIB2_DIVMOD_FUNCS that are
+ # defined as optimized assembly code in LIB1ASMFUNCS or as C code
+ # in LIB2FUNCS_EXCLUDE.
+-lib2funcs := $(filter-out $(LIB2FUNCS_EXCLUDE),$(lib2funcs))
+-LIB2_DIVMOD_FUNCS := $(filter-out $(LIB2FUNCS_EXCLUDE), \
++lib2funcs := $(filter-out $(LIB2FUNCS_EXCLUDE) $(LIB1ASMFUNCS),$(lib2funcs))
++LIB2_DIVMOD_FUNCS := $(filter-out $(LIB2FUNCS_EXCLUDE) $(LIB1ASMFUNCS), \
+ 		       $(LIB2_DIVMOD_FUNCS))
+ 
+ LIB2FUNCS_ST := $(filter-out $(LIB2FUNCS_EXCLUDE),$(LIB2FUNCS_ST))
+ 
++# Build "libgcc1" (assembly) components.
++
++lib1asmfuncs-o = $(patsubst %,%$(objext),$(LIB1ASMFUNCS))
++$(lib1asmfuncs-o): %$(objext): $(srcdir)/config/$(LIB1ASMSRC) %.vis
++	$(gcc_compile) -DL$* -xassembler-with-cpp -c $< -include $*.vis
++$(patsubst %,%.vis,$(LIB1ASMFUNCS)): %.vis: %_s$(objext)
++	$(gen-hide-list)
++libgcc-objects += $(lib1asmfuncs-o)
++
++lib1asmfuncs-s-o = $(patsubst %,%_s$(objext),$(LIB1ASMFUNCS))
++$(lib1asmfuncs-s-o): %_s$(objext): $(srcdir)/config/$(LIB1ASMSRC)
++	$(gcc_s_compile) -DL$* -xassembler-with-cpp -c $<
++ifeq ($(enable_shared),yes)
++
++libgcc-s-objects += $(lib1asmfuncs-s-o)
++
++endif
++
+ # Build lib2funcs.  For the static library also include LIB2FUNCS_ST.
+ lib2funcs-o = $(patsubst %,%$(objext),$(lib2funcs) $(LIB2FUNCS_ST))
+ $(lib2funcs-o): %$(objext): $(srcdir)/libgcc2.c

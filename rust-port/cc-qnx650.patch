@@ -1,0 +1,133 @@
+diff --git a/src/lib.rs b/src/lib.rs
+index f2effca..5699aa4 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -2223,7 +2223,7 @@ impl Build {
+                     }
+                 }
+ 
+-                if target.os == "nto" || target.os == "qnx" {
++                if (target.os == "nto" || target.os == "qnx") && target.env != "nto65" {
+                     // Select the target with `-V`, see qcc documentation:
+                     // QNX SDP 7.1: https://www.qnx.com/developers/docs/7.1/index.html#com.qnx.doc.neutrino.utilities/topic/q/qcc.html
+                     // QNX SDP 8.0: https://www.qnx.com/developers/docs/8.0/com.qnx.doc.neutrino.utilities/topic/q/qcc.html
+@@ -3291,6 +3291,19 @@ impl Build {
+                     format!("arm-kmc-eabi-{gnu}").into()
+                 } else if target.arch == "aarch64" && target.vendor == "kmc" {
+                     format!("aarch64-kmc-elf-{gnu}").into()
++                } else if (target.os == "nto" || target.os == "qnx")
++                    && target.env == "nto65"
++                {
++                    match target.arch {
++                        "arm" => format!("arm-unknown-nto-qnx6.5.0eabi-{gnu}").into(),
++                        "x86" => format!("i386-pc-nto-qnx6.5.0-{gnu}").into(),
++                        _ => {
++                            return Err(Error::new(
++                                ErrorKind::InvalidTarget,
++                                format!("Unknown architecture for QNX 6.5: {}", target.arch),
++                            ))
++                        }
++                    }
+                 } else if target.os == "nto" || target.os == "qnx" {
+                     // See for details: https://github.com/rust-lang/cc-rs/pull/1319
+                     if self.cpp { "q++" } else { "qcc" }.into()
+@@ -3783,6 +3796,12 @@ impl Build {
+                 } else if target.os == "nto" || target.os == "qnx" {
+                     // Ref: https://www.qnx.com/developers/docs/8.0/com.qnx.doc.neutrino.utilities/topic/a/ar.html
+                     name = match target.full_arch {
++                        _ if target.env == "nto65" && target.arch == "arm" => {
++                            format!("arm-unknown-nto-qnx6.5.0eabi-{tool}").into()
++                        }
++                        "i586" | "x86" if target.env == "nto65" => {
++                            format!("i386-pc-nto-qnx6.5.0-{tool}").into()
++                        }
+                         "i686" | "i586" => format!("ntox86-{tool}").into(),
+                         "x86" | "aarch64" | "x86_64" => {
+                             format!("nto{}-{}", target.arch, tool).into()
+diff --git a/src/target/llvm.rs b/src/target/llvm.rs
+index e5cf901..cb1f8c8 100644
+--- a/src/target/llvm.rs
++++ b/src/target/llvm.rs
+@@ -96,7 +96,7 @@ impl TargetInfo<'_> {
+         };
+         let version = version.unwrap_or("");
+         let env = match self.env {
+-            "newlib" | "nto70" | "nto71" | "nto71_iosock" | "p1" | "p2" | "relibc" | "sgx"
++            "newlib" | "nto65" | "nto70" | "nto71" | "nto71_iosock" | "p1" | "p2" | "relibc" | "sgx"
+             | "uclibc" => "",
+             "sim" => "simulator",
+             env => env,
+diff --git a/src/target/parser.rs b/src/target/parser.rs
+index 22b613b..b1be178 100644
+--- a/src/target/parser.rs
++++ b/src/target/parser.rs
+@@ -95,7 +95,7 @@ impl TargetInfoParserInner {
+ pub(crate) struct TargetInfoParser(OnceLock<Result<TargetInfoParserInner, Error>>);
+ 
+ impl TargetInfoParser {
+-    pub fn parse_from_cargo_environment_variables(&self) -> Result<TargetInfo<'_>, Error> {
++    pub(crate) fn parse_from_cargo_environment_variables(&self) -> Result<TargetInfo<'_>, Error> {
+         match self
+             .0
+             .get_or_init(TargetInfoParserInner::from_cargo_environment_variables)
+@@ -228,6 +228,7 @@ fn parse_envabi(last_component: &str) -> Option<(&str, &str)> {
+         // Environments
+         "msvc" => ("msvc", ""),
+         "ohos" => ("ohos", ""),
++        "qnx650" => ("nto65", ""),
+         "qnx700" => ("nto70", ""),
+         "qnx710_iosock" => ("nto71_iosock", ""),
+         "qnx710" => ("nto71", ""),
+@@ -570,6 +571,22 @@ mod tests {
+         assert!(matches!(err.kind, ErrorKind::UnknownTarget));
+     }
+ 
++    #[test]
++    fn parses_qnx650_targets() {
++        for (name, arch, full_arch, vendor) in [
++            ("armv7-unknown-nto-qnx650", "arm", "armv7", "unknown"),
++            ("i586-pc-nto-qnx650", "x86", "i586", "pc"),
++        ] {
++            let target = TargetInfo::from_rustc_target(name).unwrap();
++            assert_eq!(target.arch, arch);
++            assert_eq!(target.full_arch, full_arch);
++            assert_eq!(target.vendor, vendor);
++            assert_eq!(target.os, "nto");
++            assert_eq!(target.env, "nto65");
++            assert_eq!(target.abi, "");
++        }
++    }
++
+     // Used in .github/workflows/test-rustc-targets.yml
+     #[test]
+     #[cfg_attr(
+diff --git a/src/tool.rs b/src/tool.rs
+index 026f29f..2c561c2 100644
+--- a/src/tool.rs
++++ b/src/tool.rs
+@@ -492,7 +492,7 @@ impl Tool {
+ ///
+ /// Detection of a family is done on best-effort basis and may not accurately reflect the tool.
+ #[derive(Copy, Clone, Debug, PartialEq)]
+-pub enum ToolFamily {
++pub(crate) enum ToolFamily {
+     /// Tool is GNU Compiler Collection-like.
+     Gnu,
+     /// Tool is Clang-like. It differs from the GCC in a sense that it accepts superset of flags
+diff --git a/tests/archiver.rs b/tests/archiver.rs
+index 54a1d6c..8ad5147 100644
+--- a/tests/archiver.rs
++++ b/tests/archiver.rs
+@@ -44,6 +44,12 @@ fn various() {
+     let ar = get_ar_for_target("x86_64-pc-nto-qnx710");
+     assert_eq!(ar, "ntox86_64-ar");
+ 
++    let ar = get_ar_for_target("armv7-unknown-nto-qnx650");
++    assert_eq!(ar, "arm-unknown-nto-qnx6.5.0eabi-ar");
++
++    let ar = get_ar_for_target("i586-pc-nto-qnx650");
++    assert_eq!(ar, "i386-pc-nto-qnx6.5.0-ar");
++
+     let ar = get_ar_for_target("wasm32-wasip1");
+     assert!(
+         // `llvm-ar` is usually an absolute path for this target, so we check it with `ends_with`.

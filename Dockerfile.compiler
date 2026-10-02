@@ -1,0 +1,67 @@
+# This image contains compilers. It does not inherit the toolchain image.
+ARG TOOLCHAIN_IMAGE=localhost/qnx650-build:rust
+FROM ubuntu:26.04@sha256:678c6550cc43645e08669028bc177f50be4e7c5b8cca677067b1914d4afc7a03 AS compiler-source
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /recipe
+COPY sources.manifest LICENSE build-toolchain.sh Dockerfile Dockerfile.sdp-frida Dockerfile.tools ./
+COPY scripts/compiler-sources.sh scripts/export-compilers.sh scripts/
+COPY patches patches
+COPY toolchain-fixups toolchain-fixups
+COPY gcc11-fixups gcc11-fixups
+COPY LICENSES LICENSES
+RUN scripts/compiler-sources.sh /gnu-source
+
+FROM ${TOOLCHAIN_IMAGE} AS compiler-input
+COPY scripts/export-compilers.sh /tmp/export-compilers.sh
+RUN /tmp/export-compilers.sh /compiler-export
+
+FROM ubuntu:26.04@sha256:678c6550cc43645e08669028bc177f50be4e7c5b8cca677067b1914d4afc7a03 AS compiler-platform
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      bash binutils build-essential ca-certificates git libgmp10 libmpc3 \
+      libmpfr6 libssl3t64 pkg-config zlib1g \
+ && apt-get upgrade -y \
+ && rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /usr/share/qnx-compiler \
+ && dpkg-query -W '-f=${source:Package} ${source:Version}\n' \
+      | sort -u > /usr/share/qnx-compiler/HOST-PACKAGES.txt
+
+FROM compiler-platform AS compiler
+COPY --from=compiler-input /compiler-export/ /
+COPY scripts/link-qnx-shared.sh scripts/build-import-library.sh /usr/local/bin/
+COPY toolchain-fixups/exidx-merge.ld /usr/share/qnx-compiler/exidx-merge.ld
+COPY compiler-headers /opt/qnx-compiler-headers
+COPY compiler-imports /usr/share/qnx-compiler/imports
+ENV PATH=/opt/rust-qnx/bin:/opt/gcc11/bin:${PATH} \
+    CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=/usr/bin/gcc \
+    CC_x86_64_unknown_linux_gnu=/usr/bin/gcc \
+    CXX_x86_64_unknown_linux_gnu=/usr/bin/g++ \
+    QNX_IMPORT_LIBRARY_DIR=/opt/qnx-link-only \
+    CARGO_TARGET_ARMV7_UNKNOWN_NTO_QNX650_LINKER=/usr/local/bin/link-qnx-shared.sh
+RUN mkdir -p /opt/qnx-link-only \
+ && for lib in libc.so.3 libm.so.2 libsocket.so.3; do \
+      build-import-library.sh "$lib" "/usr/share/qnx-compiler/imports/$lib.symbols" "/opt/qnx-link-only/$lib"; \
+    done \
+ && ln -s libc.so.3 /opt/qnx-link-only/libc.so \
+ && ln -s libm.so.2 /opt/qnx-link-only/libm.so \
+ && ln -s libsocket.so.3 /opt/qnx-link-only/libsocket.so
+RUN rustc --version && cargo --version \
+ && arm-unknown-nto-qnx6.5.0eabi-gcc --version \
+ && test ! -e /opt/qnx650 && test ! -e /etc/qnx
+
+FROM ubuntu:26.04@sha256:678c6550cc43645e08669028bc177f50be4e7c5b8cca677067b1914d4afc7a03 AS compiler-host-source
+COPY --from=compiler-platform /usr/share/qnx-compiler/HOST-PACKAGES.txt /tmp/HOST-PACKAGES.txt
+COPY scripts/compiler-host-sources.sh /tmp/compiler-host-sources.sh
+RUN /tmp/compiler-host-sources.sh /host-source /tmp/HOST-PACKAGES.txt
+
+FROM compiler AS compiler-release
+COPY --from=compiler-source /gnu-source /usr/share/qnx-compiler/source
+COPY --from=compiler-host-source /host-source /usr/share/qnx-compiler/ubuntu-source
+RUN test -s /opt/rust-qnx/share/doc/rust/COPYRIGHT.html \
+ && test -s /opt/rust-qnx/share/doc/cargo/LICENSE-THIRD-PARTY \
+ && test -s /opt/rust-qnx/share/doc/rust/LLVM-LICENSE.txt \
+ && test -s /opt/rust-qnx/share/doc/rust/SOURCES.txt \
+ && test -s /opt/rust-qnx/share/doc/rust/PATCHES.sha256 \
+ && cmp /usr/share/qnx-compiler/HOST-PACKAGES.txt \
+      /usr/share/qnx-compiler/ubuntu-source/PACKAGES.txt

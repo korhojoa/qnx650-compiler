@@ -1,0 +1,3 @@
+FUNC 4 bind@@libsocket.so.2
+FUNC 4 recvfrom@@libsocket.so.2
+FUNC 4 socket@@libsocket.so.2

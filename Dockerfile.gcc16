@@ -1,0 +1,45 @@
+# GCC 16.1 cross-toolchains for QNX 6.5, built entirely from the public recipe.
+# The base image contains the user-supplied SDP and the pinned GCC 11/binutils
+# toolchain. This image is local build output and must not be redistributed.
+ARG BASE=localhost/qnx650-build
+FROM ${BASE}
+
+ARG GCC16_SHA256=50efb4d94c3397aff3b0d61a5abd748b4dd31d9d3f2ab7be05b171d36a510f79
+
+# The QNX targets to build: "arm x86" (default) or "arm". An ARM-only base
+# (Dockerfile.sdp-frida) sets ENV QNX_TARGETS=arm. An ENV with the same name
+# has priority over the build argument. Thus that base cannot build for x86.
+ARG QNX_TARGETS=""
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential libgmp-dev libmpfr-dev libmpc-dev zlib1g-dev \
+        flex bison texinfo xz-utils patch ca-certificates curl && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY gcc16-port /work/gcc16-port
+
+RUN set -eux; \
+    mkdir -p /tmp/gcc16; \
+    curl -fsSL -o /tmp/gcc16/gcc-16.1.0.tar.xz \
+        https://ftp.gnu.org/gnu/gcc/gcc-16.1.0/gcc-16.1.0.tar.xz; \
+    echo "${GCC16_SHA256}  /tmp/gcc16/gcc-16.1.0.tar.xz" | sha256sum -c -; \
+    tar -xf /tmp/gcc16/gcc-16.1.0.tar.xz -C /tmp/gcc16; \
+    patch -d /tmp/gcc16/gcc-16.1.0 -p1 < /work/gcc16-port/gcc16-qnx650.patch; \
+    cp /work/gcc16-port/exidx-merge.ld /tmp/gcc16/; \
+    for t in ${QNX_TARGETS:-arm x86}; do \
+        GCC16_ROOT=/tmp/gcc16 GCC16_PREFIX=/opt/gcc16 \
+            bash /work/gcc16-port/container-build.sh "all-$t"; \
+    done; \
+    rm -rf /tmp/gcc16
+
+ENV PATH=/opt/gcc16/bin:${PATH}
+
+RUN set -eux; \
+    for t in ${QNX_TARGETS:-arm x86}; do \
+        case "$t" in \
+            arm) arm-unknown-nto-qnx6.5.0eabi-g++ --version ;; \
+            x86) i386-pc-nto-qnx6.5.0-g++ --version ;; \
+            *) echo "unknown QNX target: $t" >&2; exit 1 ;; \
+        esac; \
+    done

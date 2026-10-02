@@ -1,0 +1,13 @@
+# Installer secrets. gen-answers.sh writes installer-answers.txt from license.key.
+license.key
+installer-answers.txt
+
+# Build workspaces.
+gcc-work/
+rust-work/
+
+# fetch-inputs.sh downloads this archive and checks it against sources.manifest.
+Python-2.7.18.tgz
+
+# Local analysis cache.
+.ruff_cache/

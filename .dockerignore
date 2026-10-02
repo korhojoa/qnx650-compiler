@@ -1,0 +1,12 @@
+# Keep local state and credentials out of every container build context.
+# No recipe copies a dot file or a dot directory.
+.git
+.??*
+license.key
+installer-answers.txt
+*.code-workspace
+
+# Build workspaces. Python-2.7.18.tgz stays in the context: Dockerfile.tools
+# copies the archive that fetch-inputs.sh downloads and checks.
+gcc-work
+rust-work

@@ -1,0 +1,100 @@
+# ARM-only alternative to Dockerfile. This file takes the QNX SDP 6.5.0 tree
+# from the public ghcr.io/frida/qnx-tools image. It does not run the SDP
+# installer from media that the user supplies. The result has the same shape
+# as the qnx650-build:base and :sdp-pristine images: the final stage is on the
+# pinned ubuntu:26.04, with i386 runtime libraries, /opt/qnx650, /etc/qnx and
+# a source-built GCC 11 in /opt/gcc11. Dockerfile.tools, Dockerfile.gcc16 and
+# Dockerfile.rust build on top of it with no change, for the ARM target only
+# (QNX_TARGETS=arm).
+#
+# Contents of the frida tree at the digest below:
+#   - host/linux/x86: the i386 SDP host tools (qcc, mkifs, dumpifs, mkefs,
+#     mkimage, ntoarm*-gdb and more) and a GCC 4.8.3 ARM toolchain. The SDP
+#     DVD has GCC 4.4.2. qcc uses gcc_ntoarmv7le by default. The tree has
+#     1710 host files. A DVD installation has 8023. The x86 host cross tools
+#     are not in the tree.
+#   - target/qnx6: armle, armle-v7 and usr/include only. There is NO x86
+#     target tree. Thus you cannot compile or link for x86 QNX with it.
+#   - /etc/qnx: an activated licence record.
+#   - /opt/sabrelite: a QNX 6.5 i.MX6 sabrelite BSP and a run.sh script. The
+#     script puts a payload into an IFS and starts it in
+#     qemu-system-arm -M sabrelite. This image does not copy it. Use the
+#     frida image directly for it.
+#   The frida Dockerfile copies a sdp/ directory that was prepared before.
+#   There is no download step and no manifest. Thus the image digest is the
+#   only pin. The tag "latest" can change. Always build from the digest.
+#   Before you change the digest, examine the new tree and update
+#   sources.manifest.
+#
+# Trade-off: with this file, the build uses a third-party copy of QNX files.
+# The media-based Dockerfile is the primary recipe. Use this file when you
+# have no SDP media and an ARM-only toolchain is sufficient.
+#
+#   podman build -f Dockerfile.sdp-frida -t qnx650-build:base \
+#       -t qnx650-build:sdp-pristine -t qnx650-build .
+#
+# Name conflict: the frida tree has arm-unknown-nto-qnx6.5.0eabi-* (GCC 4.8.3)
+# in host/linux/x86/usr/bin. The source-built GCC 11 uses the same triplet in
+# /opt/gcc11/bin. PATH puts /opt/gcc11/bin first, thus the command
+# arm-unknown-nto-qnx6.5.0eabi-gcc starts GCC 11. qcc finds its GCC 4.8.3
+# through the qcc configuration files, not through PATH.
+
+ARG FRIDA_QNX_TOOLS=ghcr.io/frida/qnx-tools@sha256:65f1864ebbff521bcc6b2afd234d5679920b9466b4ba1d57be5d8f131993bfe2
+
+FROM ${FRIDA_QNX_TOOLS} AS sdp
+
+# The same gcc-builder stage as in Dockerfile, for the ARM target only. There
+# is no x86 target tree to build against.
+FROM ubuntu:26.04@sha256:678c6550cc43645e08669028bc177f50be4e7c5b8cca677067b1914d4afc7a03 AS gcc-builder
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential libgmp-dev libmpfr-dev libmpc-dev zlib1g-dev \
+        flex bison texinfo file wget xz-utils patch ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=sdp /opt/qnx650/target/qnx6 /opt/qnx650/target/qnx6
+COPY patches /patches
+COPY build-toolchain.sh /
+RUN bash /build-toolchain.sh all-arm
+
+FROM ubuntu:26.04@sha256:678c6550cc43645e08669028bc177f50be4e7c5b8cca677067b1914d4afc7a03
+
+RUN dpkg --add-architecture i386 && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libc6:i386 libstdc++6:i386 zlib1g:i386 \
+        libgmp10 libmpfr6 libmpc3 \
+        make ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=sdp /opt/qnx650 /opt/qnx650
+COPY --from=sdp /etc/qnx /etc/qnx
+COPY --from=gcc-builder /opt/gcc11 /opt/gcc11
+COPY --from=gcc-builder /opt/qnx650/target/qnx6-armle-v7 /opt/qnx650/target/qnx6-armle-v7
+
+ENV QNX_HOST=/opt/qnx650/host/linux/x86 \
+    QNX_TARGET=/opt/qnx650/target/qnx6 \
+    QNX_CONFIGURATION=/etc/qnx \
+    QNX_TARGETS=arm \
+    MAKEFLAGS=-I/opt/qnx650/target/qnx6/usr/include \
+    PATH=/opt/gcc11/bin:/opt/qnx650/host/linux/x86/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Stop the build here, not in a later image, if the tree does not have the
+# ARM-only shape above, or if one of the two compilers does not make an ARM
+# binary.
+RUN set -eu; \
+    test -f /etc/qnx/license/licenses; \
+    test -d /opt/qnx650/target/qnx6/armle-v7; \
+    ! test -d /opt/qnx650/target/qnx6/x86; \
+    qcc -V 2>&1 | grep -q gcc_ntoarmv7le; \
+    echo 'int main(void){return 0;}' > /tmp/t.c; \
+    qcc -Vgcc_ntoarmv7le -o /tmp/t-qcc /tmp/t.c; \
+    arm-unknown-nto-qnx6.5.0eabi-gcc -o /tmp/t-gcc11 /tmp/t.c; \
+    for f in /tmp/t-qcc /tmp/t-gcc11; do \
+        head -c 20 "$f" | od -An -tx1 | tr -d ' \n' | grep -q '^7f454c46010101.*2800$'; \
+    done; \
+    rm -f /tmp/t.c /tmp/t-qcc /tmp/t-gcc11
+
+WORKDIR /src
+CMD ["/bin/bash"]

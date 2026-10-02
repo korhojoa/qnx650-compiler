@@ -1,0 +1,25 @@
+diff --git a/src/backtrace/libunwind.rs b/src/backtrace/libunwind.rs
+index 0564f2e..9af1f12 100644
+--- a/src/backtrace/libunwind.rs
++++ b/src/backtrace/libunwind.rs
+@@ -185,6 +185,7 @@ mod uw {
+             not(all(target_os = "linux", target_arch = "arm")),
+             not(all(target_os = "horizon", target_arch = "arm")),
+             not(all(target_os = "rtems", target_arch = "arm")),
++            not(all(target_os = "nto", target_arch = "arm")),
+             not(all(target_os = "vita", target_arch = "arm")),
+             not(all(target_os = "nuttx", target_arch = "arm")),
+         ))] {
+diff --git a/src/symbolize/gimli.rs b/src/symbolize/gimli.rs
+index d7ff410..2deba32 100644
+--- a/src/symbolize/gimli.rs
++++ b/src/symbolize/gimli.rs
+@@ -233,6 +233,8 @@ cfg_if::cfg_if! {
+             target_os = "android",
+         ),
+         not(target_env = "uclibc"),
++        // QNX 6.5 has no dl_iterate_phdr (QNX 7+ does)
++        not(target_env = "nto65"),
+     ))] {
+         mod libs_dl_iterate_phdr;
+         use libs_dl_iterate_phdr::native_libraries;

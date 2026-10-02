@@ -1,0 +1,7 @@
+--- a/libgcc/config/i386/nto-unwind.h
++++ b/libgcc/config/i386/nto-unwind.h
+@@ -0,0 +1,4 @@
++/* Stub for QNX Neutrino: libgcc/config.host names this file as
++   md_unwind_header for i[34567]86-*-nto-qnx*, but the qnx_11_2 port does
++   not ship it.  No MD_FALLBACK_FRAME_STATE_FOR is provided, so unwinding
++   through signal frames is not supported.  */

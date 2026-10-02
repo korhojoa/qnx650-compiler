@@ -1,0 +1,21 @@
+diff --git a/src/tools/generate-copyright/src/cargo_metadata.rs b/src/tools/generate-copyright/src/cargo_metadata.rs
+--- a/src/tools/generate-copyright/src/cargo_metadata.rs
++++ b/src/tools/generate-copyright/src/cargo_metadata.rs
+@@ -33,2 +33,4 @@ pub struct PackageMetadata {
+     pub authors: Vec<String>,
++    /// The source directory reported by Cargo, including path dependencies.
++    pub source_path: PathBuf,
+     /// A list of important files from the package, with their contents.
+@@ -103,2 +105,3 @@ pub fn get_metadata(
+                     authors: package.authors,
++                    source_path: package.manifest_path.parent().unwrap().as_std_path().to_path_buf(),
+                     notices: BTreeMap::new(),
+@@ -120,6 +123,6 @@ fn load_important_files(
+-    vendor_root: &Path,
++    _vendor_root: &Path,
+ ) -> Result<(), Error> {
+     let name_version = format!("{}-{}", package.name, package.version);
+     println!("Scraping notices for {}...", name_version);
+-    let dep_vendor_path = vendor_root.join(name_version);
++    let dep_vendor_path = &dep.source_path;
+     for entry in std::fs::read_dir(dep_vendor_path)? {

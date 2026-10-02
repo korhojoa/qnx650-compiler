@@ -1,0 +1,27 @@
+--- a/libquadmath/printf/quadmath-printf.h
++++ b/libquadmath/printf/quadmath-printf.h
+@@ -41,6 +41,10 @@
+ #ifdef HAVE_LOCALE_H
+ #include <locale.h>
+ #endif
++/* QNX libc declares ssize_t in sys/types.h, not via stdlib/stdio. */
++#ifdef HAVE_SYS_TYPES_H
++#include <sys/types.h>
++#endif
+ #include "quadmath-imp.h"
+ #include "gmp-impl.h"
+ 
+--- a/libquadmath/strtod/strtoflt128.c
++++ b/libquadmath/strtod/strtoflt128.c
+@@ -19,6 +19,11 @@
+ /* The actual implementation for all floating point sizes is in strtod.c.
+    These macros tell it to produce the `__float128' version, `strtold'.  */
+ 
++/* QNX <sys/param.h> pollution: strtod.c builds MACRO##max/##min names;
++   map them to the quadmath constants. */
++#define FLT128max FLT128_MAX
++#define FLT128min FLT128_MIN
++
+ #define FLOAT		__float128
+ #define FLT		FLT128
+ #ifdef USE_WIDE_CHAR

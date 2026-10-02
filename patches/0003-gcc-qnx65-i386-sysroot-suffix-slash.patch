@@ -1,0 +1,13 @@
+--- a/gcc/config/i386/nto.h
++++ b/gcc/config/i386/nto.h
+@@ -40,7 +40,9 @@
+ #define THREAD_MODEL_SPEC "posix"
+ 
+ #ifdef CROSS_DIRECTORY_STRUCTURE
+-#define SYSROOT_SUFFIX_SPEC "x86"
++/* Leading slash required: gcc concatenates sysroot and suffix directly,
++   so "x86" would produce "...target/qnx6x86" instead of .../qnx6/x86. */
++#define SYSROOT_SUFFIX_SPEC "/x86"
+ #endif
+ 
+ #ifndef CROSS_DIRECTORY_STRUCTURE
