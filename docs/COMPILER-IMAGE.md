@@ -111,6 +111,12 @@ jobs:
 Replace `OWNER` and `DIGEST` with the package owner and verified digest.
 Projects with native glue must also run their GNU link step.
 
+Each image release carries its own build of the Rust standard library, and
+the Rust build is not reproducible. Cargo does not detect an image change.
+Use a separate Cargo target directory for each image digest. A target
+directory from another image fails with "found possibly newer version of
+crate std".
+
 ## Source and notices
 
 The release stage requires the Rust, LLVM, and Cargo license notices.
