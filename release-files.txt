@@ -31,6 +31,7 @@ compiler-imports/libpps.so.1.symbols
 compiler-imports/libsocket.so.3.symbols
 compiler-imports/libusbdi.so.2.symbols
 compiler-notices/copyright-path-deps.patch
+compiler-startup/qnx-start.S
 docs/COMPILER-IMAGE.md
 docs/PUBLISHING.md
 docs/SUPPLY-CHAIN.md
@@ -69,7 +70,9 @@ scripts/compiler-sources.sh
 scripts/create-release-snapshot.sh
 scripts/export-compilers.sh
 scripts/export-import-symbols.sh
+scripts/link-qnx-exe.sh
 scripts/link-qnx-shared.sh
+scripts/link-qnx.sh
 scripts/publish-compiler.sh
 sources.manifest
 tests/check-compiler-image.sh

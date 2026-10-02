@@ -41,12 +41,20 @@ Run it again when the target library versions change.
 Do not copy `/opt/qnx-link-only` to a QNX device.
 Its files are link inputs only.
 
-The shared linker rejects unknown imports. It also merges the ARM exception-index sections.
-Cargo uses this linker for `armv7-unknown-nto-qnx650` shared libraries.
-Set `QNX_LINK_UNDEFINED=allow` for a plugin library whose host process
-defines some of its symbols at load time. The project then checks the
-undefined symbol set itself.
-The image does not supply executable startup objects or general QNX C/C++ headers.
+Cargo links `armv7-unknown-nto-qnx650` targets through `link-qnx.sh`. A
+shared library goes to `link-qnx-shared.sh`, which rejects unknown imports
+and merges the ARM exception-index sections. Set `QNX_LINK_UNDEFINED=allow`
+for a plugin library whose host process defines some of its symbols at load
+time. The project then checks the undefined symbol set itself.
+
+An executable goes to `link-qnx-exe.sh`. It links the image's own startup
+object, `compiler-startup/qnx-start.S`, an original implementation of the
+QNX 6.5 ARM process entry: it reads argc, argv, envp and the auxiliary
+vector from the stack, calls the libc initialisation and the constructor
+arrays, then `main` and `exit`. The program interpreter is
+`/usr/lib/ldqnx.so.2`.
+
+The image does not supply general QNX C/C++ headers.
 The small `stdio.h` declares only `vsnprintf` for existing variadic logging glue.
 
 For a separate GNU link, use these inputs:

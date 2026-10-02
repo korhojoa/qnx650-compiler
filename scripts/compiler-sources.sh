@@ -12,7 +12,7 @@ while IFS='|' read -r name _kind path hash url _mirror; do
     curl --fail --location --retry 3 --output "$out/$path" "$url"
     printf '%s  %s\n' "$hash" "$out/$path" | sha256sum --check -
 done < sources.manifest
-cp -a patches toolchain-fixups gcc11-fixups LICENSES "$out/"
+cp -a patches toolchain-fixups gcc11-fixups compiler-startup LICENSES "$out/"
 mkdir -p "$out/scripts"
 cp scripts/export-compilers.sh scripts/compiler-sources.sh "$out/scripts/"
 cp build-toolchain.sh Dockerfile Dockerfile.sdp-frida Dockerfile.tools \

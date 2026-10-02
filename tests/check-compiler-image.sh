@@ -46,6 +46,28 @@ readelf --dyn-syms -W "$work/plugin.so" | grep -q ' UND .*missing_qnx_runtime_im
 for lib in usbdi pps asound; do
     test -e "/opt/qnx-link-only/lib$lib.so"
 done
+# An executable links with the image's startup object through the Cargo
+# linker: entry at _start, the QNX program interpreter, no undefined symbol.
+cat > "$work/hello.rs" <<'EOF'
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    println!("hello from {}", args.first().map(String::as_str).unwrap_or("?"));
+}
+EOF
+rustc "$work/hello.rs" --edition 2024 --crate-type bin \
+    --target armv7-unknown-nto-qnx650 -C opt-level=2 \
+    -C linker=/usr/local/bin/link-qnx.sh -o "$work/hello"
+readelf -h -l -d -s -W "$work/hello" > "$work/hello.txt"
+grep -q 'Version5 EABI' "$work/hello.txt"
+grep -q 'Requesting program interpreter: /usr/lib/ldqnx.so.2' "$work/hello.txt"
+entry=$(awk '/Entry point address/ {print $4}' "$work/hello.txt")
+start=$(awk '$8 == "_start" {print "0x" $2}' "$work/hello.txt" | head -1)
+[ "$((entry))" -eq "$((start))" ]
+grep -q 'ARM_EXIDX' "$work/hello.txt"
+if grep NEEDED "$work/hello.txt" | grep -vE 'libc.so.3|libm.so.2|libsocket.so.3'; then
+    echo 'Unexpected native dependency in the executable' >&2
+    exit 1
+fi
 # Cargo build scripts must use the Linux host compiler.
 mkdir -p "$work/host/src"
 printf '[package]\nname="compiler-host-check"\nversion="0.1.0"\nedition="2024"\n' > "$work/host/Cargo.toml"

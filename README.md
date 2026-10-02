@@ -36,12 +36,13 @@ podman run --rm -v "$PWD:/src" -w /src \
 ```
 
 Projects with native glue must also compile and link that glue.
-The shared linker accepts only declared runtime imports.
+The linker accepts only declared runtime imports.
 The QNX device supplies the actual runtime libraries when it loads the output.
 Do not deploy the generated libraries from `/opt/qnx-link-only`.
 
-The image does not supply general QNX C/C++ headers or executable startup
-objects. It supports the documented archive and shared-library build paths.
+Executables link with the image's own startup object. The image does not
+supply general QNX C/C++ headers. It supports the documented archive,
+shared-library and executable build paths.
 
 ## Publish the public image
 

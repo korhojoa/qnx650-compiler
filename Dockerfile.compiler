@@ -9,6 +9,7 @@ COPY scripts/compiler-sources.sh scripts/export-compilers.sh scripts/
 COPY patches patches
 COPY toolchain-fixups toolchain-fixups
 COPY gcc11-fixups gcc11-fixups
+COPY compiler-startup compiler-startup
 COPY LICENSES LICENSES
 RUN scripts/compiler-sources.sh /gnu-source
 
@@ -29,8 +30,10 @@ RUN mkdir -p /usr/share/qnx-compiler \
 
 FROM compiler-platform AS compiler
 COPY --from=compiler-input /compiler-export/ /
-COPY scripts/link-qnx-shared.sh scripts/build-import-library.sh /usr/local/bin/
+COPY scripts/link-qnx.sh scripts/link-qnx-shared.sh scripts/link-qnx-exe.sh \
+     scripts/build-import-library.sh /usr/local/bin/
 COPY toolchain-fixups/exidx-merge.ld /usr/share/qnx-compiler/exidx-merge.ld
+COPY compiler-startup/qnx-start.S /usr/share/qnx-compiler/qnx-start.S
 COPY compiler-headers /opt/qnx-compiler-headers
 COPY compiler-imports /usr/share/qnx-compiler/imports
 ENV PATH=/opt/rust-qnx/bin:/opt/gcc11/bin:${PATH} \
@@ -38,7 +41,10 @@ ENV PATH=/opt/rust-qnx/bin:/opt/gcc11/bin:${PATH} \
     CC_x86_64_unknown_linux_gnu=/usr/bin/gcc \
     CXX_x86_64_unknown_linux_gnu=/usr/bin/g++ \
     QNX_IMPORT_LIBRARY_DIR=/opt/qnx-link-only \
-    CARGO_TARGET_ARMV7_UNKNOWN_NTO_QNX650_LINKER=/usr/local/bin/link-qnx-shared.sh
+    CARGO_TARGET_ARMV7_UNKNOWN_NTO_QNX650_LINKER=/usr/local/bin/link-qnx.sh
+# The process entry for executables: an original startup object.
+RUN arm-unknown-nto-qnx6.5.0eabi-as -march=armv7-a -meabi=5 \
+      -o /usr/share/qnx-compiler/qnx-start.o /usr/share/qnx-compiler/qnx-start.S
 RUN mkdir -p /opt/qnx-link-only \
  && for lib in libc.so.3 libm.so.2 libsocket.so.3 libusbdi.so.2 libpps.so.1 libasound.so.2; do \
       build-import-library.sh "$lib" "/usr/share/qnx-compiler/imports/$lib.symbols" "/opt/qnx-link-only/$lib"; \
