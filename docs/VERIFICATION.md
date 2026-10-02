@@ -30,7 +30,7 @@ The runner image passes these local checks:
 - Nested Podman uses overlay storage with fuse-overlayfs.
 - A nested image build executes a build command.
 - A container from that image returns the expected test output.
-- `nproc` returns four jobs with the configured thread limit.
+- `nproc` returns the configured CPU count.
 
 The runner is not registered with GitHub. These local checks do not verify
 a GitHub connection or a complete compiler workflow run.

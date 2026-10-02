@@ -14,6 +14,6 @@ RUN mkdir -p /opt/actions-runner \
  && rm /tmp/runner.tar.gz
 COPY runner/storage.conf /etc/containers/storage.conf
 COPY runner/entrypoint.sh /usr/local/bin/compiler-runner
-ENV RUNNER_ALLOW_RUNASROOT=1 OMP_THREAD_LIMIT=4
+ENV RUNNER_ALLOW_RUNASROOT=1
 WORKDIR /runner
 ENTRYPOINT ["/usr/local/bin/compiler-runner"]

@@ -11,6 +11,10 @@ on:
         description: Runner label with enough storage for the source build
         type: string
         default: qnx650-compiler
+      jobs:
+        description: Parallel jobs for the Rust build (empty = one per CPU)
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -41,6 +45,8 @@ jobs:
             exit 1
           fi
       - name: Assemble and test the compiler image
+        env:
+          BUILD_JOBS: ${{ inputs.jobs }}
         run: scripts/build-compiler-image.sh
       - name: Upload the compiler image
         if: inputs.publish

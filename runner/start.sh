@@ -11,15 +11,21 @@ token=$(realpath "$token")
 [ -s "$token" ] || exit 2
 image=localhost/qnx650-compiler-runner:local
 name=qnx650-compiler-github-runner
+# CPU quota and memory limit for the runner and every build inside it.
+# The CPU count also sets the job count that nproc reports inside the runner.
+cpus=${RUNNER_CPUS:-12}
+memory=${RUNNER_MEMORY:-48g}
+[[ $cpus =~ ^[1-9][0-9]*$ ]] || exit 2
+[[ $memory =~ ^[1-9][0-9]*[gm]$ ]] || exit 2
 if podman container exists "$name"; then
     echo "Container $name exists. Inspect it before a change." >&2
     exit 2
 fi
 podman build -f "$root/runner/Dockerfile" -t "$image" "$root"
 podman run -d --name "$name" --privileged \
-    --cpus 4 --memory 24g --pids-limit 4096 \
+    --cpus "$cpus" --memory "$memory" --pids-limit 4096 \
     --restart unless-stopped \
-    -e RUNNER_URL="$url" \
+    -e RUNNER_URL="$url" -e OMP_THREAD_LIMIT="$cpus" \
     -v qnx650-compiler-runner-state:/runner \
     -v qnx650-compiler-runner-storage:/var/lib/containers \
     -v "$token:/run/secrets/registration-token:ro" \

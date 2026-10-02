@@ -5,7 +5,7 @@ root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$root"
 prefix=${COMPILER_BUILD_PREFIX:-localhost/qnx650-compiler-build}
 image=${COMPILER_IMAGE:-localhost/qnx650-compiler:source}
-jobs=${BUILD_JOBS:-4}
+jobs=${BUILD_JOBS:-$(nproc)}
 [[ $jobs =~ ^[1-9][0-9]*$ ]] || exit 2
 command -v podman >/dev/null
 if [ -z "${COMPILER_BUILD_BASE:-}" ]; then

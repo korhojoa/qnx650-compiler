@@ -19,8 +19,8 @@ scripts/build-compiler-image.sh
 ```
 
 The command creates `localhost/qnx650-compiler:source` and runs its tests.
-It uses four jobs for the Rust build by default. Set `BUILD_JOBS` to change
-this value.
+It uses one job per CPU for the Rust build by default. Set `BUILD_JOBS` to
+change this value.
 
 The complete build uses the pinned Frida QNX tools image as an intermediate
 input. That input contains SDP files. The intermediate images and their

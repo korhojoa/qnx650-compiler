@@ -6,8 +6,12 @@ It has no host Podman socket and no host project mounts.
 
 The container requires `--privileged` for nested Podman and fuse-overlayfs.
 It uses separate named volumes for runner state and container build storage.
-The start script sets a four-CPU quota and a 24 GiB memory limit.
-`OMP_THREAD_LIMIT=4` also limits the job count returned by `nproc`. The script does not change an existing container with the same name.
+The start script sets a CPU quota and a memory limit. The defaults are 12 CPUs
+and 48 GiB. Set `RUNNER_CPUS` and `RUNNER_MEMORY` to change them. The CPU
+count also sets the job count that `nproc` reports inside the runner, and
+the compiler build uses one job per CPU unless the workflow `jobs` input
+says otherwise. The script does not change an existing container with the
+same name.
 
 The compiler workflow uses the `qnx650-compiler` runner label. Only the manual
 compiler workflow uses this runner. Pull-request source checks use GitHub-hosted
