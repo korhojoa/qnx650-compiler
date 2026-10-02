@@ -21,7 +21,7 @@ FROM ubuntu:26.04@sha256:678c6550cc43645e08669028bc177f50be4e7c5b8cca677067b1914
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       bash binutils build-essential ca-certificates git libgmp10 libmpc3 \
-      libmpfr6 libssl3t64 pkg-config zlib1g \
+      libmpfr6 libssl3t64 pkg-config python3 zlib1g \
  && apt-get upgrade -y \
  && rm -rf /var/lib/apt/lists/*
 RUN mkdir -p /usr/share/qnx-compiler \

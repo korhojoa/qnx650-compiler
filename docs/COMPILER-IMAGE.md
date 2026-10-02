@@ -58,6 +58,9 @@ arrays, then `main` and `exit`. The program interpreter is
 The image does not supply general QNX C/C++ headers.
 The small `stdio.h` declares only `vsnprintf` for existing variadic logging glue.
 
+The image contains `python3` for build helper scripts that run inside it,
+together with `git`, `pkg-config` and the host C compiler for build scripts.
+
 For a separate GNU link, use these inputs:
 
 ```sh
