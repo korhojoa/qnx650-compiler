@@ -40,12 +40,10 @@ ENV PATH=/opt/rust-qnx/bin:/opt/gcc11/bin:${PATH} \
     QNX_IMPORT_LIBRARY_DIR=/opt/qnx-link-only \
     CARGO_TARGET_ARMV7_UNKNOWN_NTO_QNX650_LINKER=/usr/local/bin/link-qnx-shared.sh
 RUN mkdir -p /opt/qnx-link-only \
- && for lib in libc.so.3 libm.so.2 libsocket.so.3; do \
+ && for lib in libc.so.3 libm.so.2 libsocket.so.3 libusbdi.so.2 libpps.so.1 libasound.so.2; do \
       build-import-library.sh "$lib" "/usr/share/qnx-compiler/imports/$lib.symbols" "/opt/qnx-link-only/$lib"; \
-    done \
- && ln -s libc.so.3 /opt/qnx-link-only/libc.so \
- && ln -s libm.so.2 /opt/qnx-link-only/libm.so \
- && ln -s libsocket.so.3 /opt/qnx-link-only/libsocket.so
+      ln -s "$lib" "/opt/qnx-link-only/${lib%.so.*}.so"; \
+    done
 RUN rustc --version && cargo --version \
  && arm-unknown-nto-qnx6.5.0eabi-gcc --version \
  && test ! -e /opt/qnx650 && test ! -e /etc/qnx

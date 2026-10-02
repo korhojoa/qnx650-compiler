@@ -17,6 +17,14 @@ if [ "$shared" -ne 1 ]; then
     exit 2
 fi
 exidx=${QNX_EXIDX_SCRIPT:-/usr/share/qnx-compiler/exidx-merge.ld}
+# QNX_LINK_UNDEFINED=allow permits undefined symbols, for a plugin library
+# whose host process defines them at load time. The project must then check
+# the undefined set itself. The default fails the link on any unknown symbol.
+case "${QNX_LINK_UNDEFINED:-fail}" in
+    fail)  undefined='-Wl,--no-undefined' ;;
+    allow) undefined='-Wl,--unresolved-symbols=ignore-all' ;;
+    *) echo 'QNX_LINK_UNDEFINED must be fail or allow' >&2; exit 2 ;;
+esac
 exec arm-unknown-nto-qnx6.5.0eabi-gcc -nostdlib \
-    -Wl,--no-undefined -Wl,-z,noexecstack -Wl,-T,"$exidx" -L"$QNX_IMPORT_LIBRARY_DIR" \
+    "$undefined" -Wl,-z,noexecstack -Wl,-T,"$exidx" -L"$QNX_IMPORT_LIBRARY_DIR" \
     "${args[@]}"

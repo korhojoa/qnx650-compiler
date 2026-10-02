@@ -24,9 +24,12 @@ SECURITY.md
 THIRD_PARTY_NOTICES.md
 build-toolchain.sh
 compiler-headers/stdio.h
+compiler-imports/libasound.so.2.symbols
 compiler-imports/libc.so.3.symbols
 compiler-imports/libm.so.2.symbols
+compiler-imports/libpps.so.1.symbols
 compiler-imports/libsocket.so.3.symbols
+compiler-imports/libusbdi.so.2.symbols
 compiler-notices/copyright-path-deps.patch
 docs/COMPILER-IMAGE.md
 docs/PUBLISHING.md

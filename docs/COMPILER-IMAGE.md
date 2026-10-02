@@ -27,7 +27,8 @@ The GitHub workflow uses the complete source build.
 
 ## Native dependencies
 
-The image contains link-only declarations for `libc.so.3`, `libm.so.2`, and `libsocket.so.3`.
+The image contains link-only declarations for `libc.so.3`, `libm.so.2`,
+`libsocket.so.3`, `libusbdi.so.2`, `libpps.so.1`, and `libasound.so.2`.
 The assembler creates these declarations from the text files in `compiler-imports/`.
 They contain symbol names and ELF metadata. They contain no QNX runtime implementation.
 The resulting application uses the actual libraries on the QNX device.
@@ -42,6 +43,9 @@ Its files are link inputs only.
 
 The shared linker rejects unknown imports. It also merges the ARM exception-index sections.
 Cargo uses this linker for `armv7-unknown-nto-qnx650` shared libraries.
+Set `QNX_LINK_UNDEFINED=allow` for a plugin library whose host process
+defines some of its symbols at load time. The project then checks the
+undefined symbol set itself.
 The image does not supply executable startup objects or general QNX C/C++ headers.
 The small `stdio.h` declares only `vsnprintf` for existing variadic logging glue.
 

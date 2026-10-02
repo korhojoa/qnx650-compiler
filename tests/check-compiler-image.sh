@@ -37,6 +37,15 @@ if rustc "$work/missing.rs" --edition 2024 --crate-type cdylib \
     exit 1
 fi
 grep 'undefined reference.*missing_qnx_runtime_import' "$work/missing.log"
+# A plugin library may leave symbols for its host process when asked.
+QNX_LINK_UNDEFINED=allow rustc "$work/missing.rs" --edition 2024 --crate-type cdylib \
+    --target armv7-unknown-nto-qnx650 -C panic=abort \
+    -C linker=/usr/local/bin/link-qnx-shared.sh -o "$work/plugin.so"
+readelf --dyn-syms -W "$work/plugin.so" | grep -q ' UND .*missing_qnx_runtime_import'
+# The other declared libraries link by name.
+for lib in usbdi pps asound; do
+    test -e "/opt/qnx-link-only/lib$lib.so"
+done
 # Cargo build scripts must use the Linux host compiler.
 mkdir -p "$work/host/src"
 printf '[package]\nname="compiler-host-check"\nversion="0.1.0"\nedition="2024"\n' > "$work/host/Cargo.toml"

@@ -1,0 +1,3 @@
+FUNC 4 _fini
+FUNC 4 _init
+FUNC 4 ppsparse
