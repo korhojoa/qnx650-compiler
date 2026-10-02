@@ -65,6 +65,7 @@ scripts/compiler-host-sources.sh
 scripts/compiler-sources.sh
 scripts/create-release-snapshot.sh
 scripts/export-compilers.sh
+scripts/export-import-symbols.sh
 scripts/link-qnx-shared.sh
 scripts/publish-compiler.sh
 sources.manifest

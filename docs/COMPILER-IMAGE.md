@@ -32,6 +32,11 @@ The assembler creates these declarations from the text files in `compiler-import
 They contain symbol names and ELF metadata. They contain no QNX runtime implementation.
 The resulting application uses the actual libraries on the QNX device.
 
+The text files list the complete export table of each library: every global
+function and object, with its size and version tag. `scripts/export-import-symbols.sh`
+writes them from the export tables of the libraries in a local SDP image.
+Run it again when the target library versions change.
+
 Do not copy `/opt/qnx-link-only` to a QNX device.
 Its files are link inputs only.
 
