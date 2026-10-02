@@ -1,8 +1,9 @@
 # QNX 6.5 ARM Rust compiler image
 
-This repository assembles a compiler image for ARM Rust archives and shared
-libraries that run on QNX 6.5. The final image contains Rust, Cargo, GNU
-compilers, binutils, source archives, and license notices.
+This repository assembles a compiler image for ARM Rust archives, shared
+libraries and executables that run on QNX 6.5. The final image contains
+Rust, Cargo, Clippy, GNU compilers, binutils, source archives, and license
+notices.
 
 The final image contains no QNX SDP tree, QNX runtime implementation, or
 activation record. It contains target definitions and runtime interface

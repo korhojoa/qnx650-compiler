@@ -60,6 +60,8 @@ The small `stdio.h` declares only `vsnprintf` for existing variadic logging glue
 
 The image contains `python3` for build helper scripts that run inside it,
 together with `git`, `pkg-config` and the host C compiler for build scripts.
+`cargo clippy` works for the QNX target: the clippy driver is built with the
+same compiler.
 
 For a separate GNU link, use these inputs:
 

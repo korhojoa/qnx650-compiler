@@ -75,4 +75,7 @@ printf 'fn main() {}\n' > "$work/host/build.rs"
 printf 'fn main() {}\n' > "$work/host/src/main.rs"
 CARGO_HOME="$work/cargo-home" cargo build --offline --manifest-path "$work/host/Cargo.toml"
 "$work/host/target/debug/compiler-host-check"
+# Clippy lints for the QNX target inside the image.
+CARGO_HOME="$work/cargo-home" cargo clippy --offline --manifest-path "$work/host/Cargo.toml" \
+    --target armv7-unknown-nto-qnx650 -- -D warnings
 echo 'Compiler image checks passed'

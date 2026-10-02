@@ -4,7 +4,8 @@ set -euo pipefail
 out=${1:?usage: export-compilers.sh OUTPUT}
 test ! -e "$out"
 mkdir -p "$out/opt/rust-qnx/bin" "$out/opt/rust-qnx/lib/rustlib" "$out/opt/gcc11/bin"
-cp -L /opt/rust-qnx/bin/rustc /opt/rust-qnx/bin/cargo "$out/opt/rust-qnx/bin/"
+cp -L /opt/rust-qnx/bin/rustc /opt/rust-qnx/bin/cargo \
+      /opt/rust-qnx/bin/clippy-driver /opt/rust-qnx/bin/cargo-clippy "$out/opt/rust-qnx/bin/"
 cp -a /opt/rust-qnx/lib/librustc_driver-*.so /opt/rust-qnx/lib/libLLVM*.so* \
     "$out/opt/rust-qnx/lib/"
 for target in x86_64-unknown-linux-gnu armv7-unknown-nto-qnx650; do

@@ -84,7 +84,12 @@ ENV PATH=/opt/gcc16/bin:/opt/gcc11/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:
     CARGO_HOME=/work/rust-work/xpy-cargo-home \
     BOOTSTRAP_SKIP_TARGET_SANITY=1 \
     CFLAGS_armv7_unknown_nto_qnx650="-mno-unaligned-access -O2"
-RUN git config --global --add safe.directory '*' && ./x.py build --jobs ${BUILD_JOBS} --stage 1 library
+# Library and clippy in ONE invocation: x.py reassembles the stage-1 sysroot
+# at the start of every invocation, so a separate clippy build would wipe
+# the QNX standard library this one installs. Consumers lint their crates
+# for the target inside the image, so clippy ships with the compiler.
+RUN git config --global --add safe.directory '*' \
+ && ./x.py build --jobs ${BUILD_JOBS} --stage 1 library src/tools/clippy
 
 # Make the notices for this source tree and its dependencies.
 COPY compiler-notices/copyright-path-deps.patch /tmp/copyright-path-deps.patch
@@ -99,6 +104,8 @@ RUN set -eux; \
     rm -rf "$out"; mkdir -p "$out/bin" "$out/lib/rustlib"; \
     cp -a "$S1/bin/rustc" "$out/bin/"; \
     cp -a "$S0/bin/cargo" "$out/bin/"; \
+    cp -a build/x86_64-unknown-linux-gnu/stage1-tools-bin/clippy-driver \
+          build/x86_64-unknown-linux-gnu/stage1-tools-bin/cargo-clippy "$out/bin/"; \
     cp -a "$S1"/lib/*.so "$S1"/lib/*.so.* "$out/lib/"; \
     triples=x86_64-unknown-linux-gnu; \
     for t in ${QNX_TARGETS:-arm x86}; do \
@@ -155,6 +162,7 @@ RUN node --version \
  && rustc --version \
  && rustc --print target-list | grep -q armv7-unknown-nto-qnx650 \
  && cargo --version \
+ && cargo clippy --version \
  && cargo new -q --vcs none --name buildscript /tmp/buildscript \
  && echo 'fn main() {}' > /tmp/buildscript/build.rs \
  && cargo build -q --offline --manifest-path /tmp/buildscript/Cargo.toml \
