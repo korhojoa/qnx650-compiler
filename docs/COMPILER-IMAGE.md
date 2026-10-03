@@ -64,8 +64,9 @@ together with `git`, `pkg-config` and the host C compiler for build scripts.
 `cargo clippy` works for the QNX target, and `cargo fmt` and `cargo doc`
 are available: clippy, rustfmt and rustdoc are built with the same compiler.
 `cargo audit` is installed from crates.io at the version in
-`sources.manifest`; it fetches the advisory database itself, so a run
-needs the network.
+`sources.manifest`. The image contains no advisory database. The tool
+downloads the current RustSec database at each run, so a run needs the
+network, or a mounted database directory with `--db` and `--no-fetch`.
 
 For a separate GNU link, use these inputs:
 
