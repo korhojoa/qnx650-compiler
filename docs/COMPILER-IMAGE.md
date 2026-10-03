@@ -81,7 +81,9 @@ arm-unknown-nto-qnx6.5.0eabi-gcc \
 
 ## Public GHCR publication
 
-The workflow requires 50 GiB of free build storage before the source build.
+The workflow requires 24 GiB of free build storage before the build, from
+the measured growth of a cold build, and prints each run's growth after
+the build.
 The local source build and a GitHub workflow run are separate tests.
 
 1. Open the `compiler image` workflow in GitHub Actions.

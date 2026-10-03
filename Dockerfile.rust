@@ -84,13 +84,15 @@ ENV PATH=/opt/gcc16/bin:/opt/gcc11/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:
     CARGO_HOME=/work/rust-work/xpy-cargo-home \
     BOOTSTRAP_SKIP_TARGET_SANITY=1 \
     CFLAGS_armv7_unknown_nto_qnx650="-mno-unaligned-access -O2"
-# Library, clippy, rustfmt and rustdoc in ONE invocation: x.py reassembles
-# the stage-1 sysroot at the start of every invocation, so a separate tool
-# build would wipe the QNX standard library this one installs. Consumers
-# lint, format and document their crates inside the image, so the tools
-# ship with the compiler.
+# Three layers in cost order (LLVM, compiler, library and tools), so a
+# change to a cheap step does not rebuild an expensive one.
 RUN git config --global --add safe.directory '*' \
- && ./x.py build --jobs ${BUILD_JOBS} --stage 1 library \
+ && ./x.py build --jobs ${BUILD_JOBS} src/llvm-project
+RUN ./x.py build --jobs ${BUILD_JOBS} --stage 1 compiler
+# Library and tools in ONE invocation: x.py reassembles the stage-1 sysroot
+# at the start of every invocation, so a separate tool build would wipe the
+# QNX standard library this one installs.
+RUN ./x.py build --jobs ${BUILD_JOBS} --stage 1 library \
       src/tools/clippy src/tools/rustfmt src/tools/rustdoc
 
 # Make the notices for this source tree and its dependencies.

@@ -1,9 +1,9 @@
-FROM ubuntu:24.04@sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebffbc7092d90
+FROM ubuntu:26.04@sha256:678c6550cc43645e08669028bc177f50be4e7c5b8cca677067b1914d4afc7a03
 ARG RUNNER_VERSION=2.337.0
 ARG RUNNER_SHA256=70920811a4f8ad4328818682bca5c6469c1c942fab52448868071d0063816613
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      bash ca-certificates curl fuse-overlayfs git jq libicu74 libssl3t64 \
+      bash ca-certificates curl fuse-overlayfs git jq libicu78 libssl3t64 \
       nodejs podman procps python3 rsync tar uidmap zlib1g \
  && rm -rf /var/lib/apt/lists/*
 RUN mkdir -p /opt/actions-runner \

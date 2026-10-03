@@ -39,15 +39,26 @@ jobs:
           storage=$(podman info --format '{{.Store.GraphRoot}}')
           mkdir -p "$storage"
           available=$(df -Pk "$storage" | awk 'NR == 2 {print $4}')
-          if [ "$available" -lt 52428800 ]; then
-            echo 'The full source build requires 50 GiB of free build storage.' >&2
-            echo 'Select a runner with more storage.' >&2
+          # A cold build adds about 20 GB to the store on this host's zfs
+          # (measured 2026-10-03: 14 GB for the Rust and compiler stages, 6 GB
+          # for the GCC chain). The step after the build prints each run's
+          # growth; update this bound from those numbers, not from a guess.
+          if [ "$available" -lt 25165824 ]; then
+            echo 'The build needs 24 GiB of free build storage.' >&2
             exit 1
           fi
+          echo "STORE_KB_BEFORE=$(du -sk "$storage" | cut -f1)" >> "$GITHUB_ENV"
       - name: Assemble and test the compiler image
         env:
           BUILD_JOBS: ${{ inputs.jobs }}
         run: scripts/build-compiler-image.sh
+      - name: Report the build storage growth
+        if: always()
+        run: |
+          storage=$(podman info --format '{{.Store.GraphRoot}}')
+          after=$(du -sk "$storage" | cut -f1)
+          echo "store before: $((STORE_KB_BEFORE / 1024)) MiB, after: $((after / 1024)) MiB, growth: $(((after - STORE_KB_BEFORE) / 1024)) MiB"
+          df -h "$storage"
       - name: Upload the compiler image
         if: inputs.publish
         env:

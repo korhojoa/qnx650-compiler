@@ -11,9 +11,8 @@ declarations. This independent project has no affiliation with QNX.
 
 ## Assemble the image
 
-Use Linux on x86-64 with Podman. Provide at least 50 GiB of free build storage
-and 16 GiB of RAM. The storage figure is a build allowance, not a measured
-minimum.
+Use Linux on x86-64 with Podman. A cold build adds about 20 GB to the
+container store (measured on a zfs host) and needs 16 GiB of RAM.
 
 ```sh
 scripts/build-compiler-image.sh
