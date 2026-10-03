@@ -13,6 +13,7 @@ rust-1.94.1-qnx650           | git   | rust-work/rust                       | e4
 rust-libc-0.2.189-qnx650     | git   | rust-work/libc                       | ef0906e20828777175f65caa7e681a0ce33c559a                         | https://github.com/rust-lang/libc.git | -
 cc-rs-1.4.3-qnx650           | git   | rust-work/cc-rs                      | 3c4ab883616b373c0287319d1a2f237aad0c79a0                         | https://github.com/rust-lang/cc-rs.git | -
 backtrace-rust-submodule     | git   | rust-work/rust/library/backtrace     | b65ab935fb2e0d59dba8966ffca09c9cc5a5f57c                         | https://github.com/rust-lang/backtrace-rs.git | -
+cargo-audit                  | crate | (cargo install in Dockerfile.compiler) | 0.22.2                                                       | https://crates.io/crates/cargo-audit | -
 qnxsdp-6.5.0-dvd             | tar   | qnxsdp-6.5.0-201007091524-dvd.iso   | c8701b45ae91b9ef760b66a9487f0397df2be8b4f7c40dd2851226db68045db8 | (QNX SDP 6.5.0 DVD, not downloadable)  | -
 github-runner-2.337.0 | tar | (GitHub runner archive) | 70920811a4f8ad4328818682bca5c6469c1c942fab52448868071d0063816613 | https://github.com/actions/runner/releases/download/v2.337.0/actions-runner-linux-x64-2.337.0.tar.gz | -
 github-runner-ubuntu-base | image | (FROM in runner/Dockerfile) | sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebffbc7092d90 | docker.io/library/ubuntu:24.04 | -

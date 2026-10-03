@@ -77,6 +77,10 @@ awk -F'|' '
             print FNR ": invalid git commit: " rev > "/dev/stderr"
             bad=1
         }
+        if (kind == "crate" && rev !~ /^[0-9]+\.[0-9]+\.[0-9]+$/) {
+            print FNR ": invalid crate version: " rev > "/dev/stderr"
+            bad=1
+        }
     }
     END { exit bad }
 ' sources.manifest || fail "sources.manifest revisions"

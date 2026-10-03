@@ -84,12 +84,14 @@ ENV PATH=/opt/gcc16/bin:/opt/gcc11/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:
     CARGO_HOME=/work/rust-work/xpy-cargo-home \
     BOOTSTRAP_SKIP_TARGET_SANITY=1 \
     CFLAGS_armv7_unknown_nto_qnx650="-mno-unaligned-access -O2"
-# Library and clippy in ONE invocation: x.py reassembles the stage-1 sysroot
-# at the start of every invocation, so a separate clippy build would wipe
-# the QNX standard library this one installs. Consumers lint their crates
-# for the target inside the image, so clippy ships with the compiler.
+# Library, clippy, rustfmt and rustdoc in ONE invocation: x.py reassembles
+# the stage-1 sysroot at the start of every invocation, so a separate tool
+# build would wipe the QNX standard library this one installs. Consumers
+# lint, format and document their crates inside the image, so the tools
+# ship with the compiler.
 RUN git config --global --add safe.directory '*' \
- && ./x.py build --jobs ${BUILD_JOBS} --stage 1 library src/tools/clippy
+ && ./x.py build --jobs ${BUILD_JOBS} --stage 1 library \
+      src/tools/clippy src/tools/rustfmt src/tools/rustdoc
 
 # Make the notices for this source tree and its dependencies.
 COPY compiler-notices/copyright-path-deps.patch /tmp/copyright-path-deps.patch
@@ -103,9 +105,13 @@ RUN set -eux; \
     out=/opt/rust-qnx; \
     rm -rf "$out"; mkdir -p "$out/bin" "$out/lib/rustlib"; \
     cp -a "$S1/bin/rustc" "$out/bin/"; \
+    if [ -e "$S1/bin/rustdoc" ]; then cp -a "$S1/bin/rustdoc" "$out/bin/"; \
+    else cp -a build/x86_64-unknown-linux-gnu/stage1-tools-bin/rustdoc "$out/bin/"; fi; \
     cp -a "$S0/bin/cargo" "$out/bin/"; \
     cp -a build/x86_64-unknown-linux-gnu/stage1-tools-bin/clippy-driver \
-          build/x86_64-unknown-linux-gnu/stage1-tools-bin/cargo-clippy "$out/bin/"; \
+          build/x86_64-unknown-linux-gnu/stage1-tools-bin/cargo-clippy \
+          build/x86_64-unknown-linux-gnu/stage1-tools-bin/rustfmt \
+          build/x86_64-unknown-linux-gnu/stage1-tools-bin/cargo-fmt "$out/bin/"; \
     cp -a "$S1"/lib/*.so "$S1"/lib/*.so.* "$out/lib/"; \
     triples=x86_64-unknown-linux-gnu; \
     for t in ${QNX_TARGETS:-arm x86}; do \
@@ -163,6 +169,8 @@ RUN node --version \
  && rustc --print target-list | grep -q armv7-unknown-nto-qnx650 \
  && cargo --version \
  && cargo clippy --version \
+ && cargo fmt --version \
+ && rustdoc --version \
  && cargo new -q --vcs none --name buildscript /tmp/buildscript \
  && echo 'fn main() {}' > /tmp/buildscript/build.rs \
  && cargo build -q --offline --manifest-path /tmp/buildscript/Cargo.toml \

@@ -42,6 +42,28 @@ ENV PATH=/opt/rust-qnx/bin:/opt/gcc11/bin:${PATH} \
     CXX_x86_64_unknown_linux_gnu=/usr/bin/g++ \
     QNX_IMPORT_LIBRARY_DIR=/opt/qnx-link-only \
     CARGO_TARGET_ARMV7_UNKNOWN_NTO_QNX650_LINKER=/usr/local/bin/link-qnx.sh
+# cargo-audit, the advisory check the projects' gates run. Installed from
+# crates.io at the pinned version with its own lock file; the license files
+# of every crate that went into it are kept beside the compiler notices,
+# with the list of crate versions. This step needs the host linker setting
+# from the ENV above: the Rust build carries no self-contained linker.
+ARG CARGO_AUDIT_VERSION=0.22.2
+RUN export CARGO_HOME=/tmp/cargo-audit-home \
+ && cargo install cargo-audit --locked --version "${CARGO_AUDIT_VERSION}" --root /opt/rust-qnx \
+ && notices=/usr/share/qnx-compiler/cargo-audit-notices \
+ && mkdir -p "$notices" \
+ && for d in /tmp/cargo-audit-home/registry/src/*/*; do \
+      n=$(basename "$d"); \
+      echo "$n" >> "$notices/CRATES.txt"; \
+      for f in "$d"/LICENSE* "$d"/LICENCE* "$d"/COPYING* "$d"/COPYRIGHT* "$d"/NOTICE*; do \
+        [ -f "$f" ] || continue; \
+        mkdir -p "$notices/$n"; \
+        cp "$f" "$notices/$n/"; \
+      done; \
+    done \
+ && rm -rf /tmp/cargo-audit-home /opt/rust-qnx/.crates.toml /opt/rust-qnx/.crates2.json \
+ && test -s "$notices/CRATES.txt" \
+ && cargo audit --version
 # The process entry for executables: an original startup object.
 RUN arm-unknown-nto-qnx6.5.0eabi-as -march=armv7-a -meabi=5 \
       -o /usr/share/qnx-compiler/qnx-start.o /usr/share/qnx-compiler/qnx-start.S

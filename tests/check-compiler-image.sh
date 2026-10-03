@@ -75,7 +75,13 @@ printf 'fn main() {}\n' > "$work/host/build.rs"
 printf 'fn main() {}\n' > "$work/host/src/main.rs"
 CARGO_HOME="$work/cargo-home" cargo build --offline --manifest-path "$work/host/Cargo.toml"
 "$work/host/target/debug/compiler-host-check"
-# Clippy lints for the QNX target inside the image.
+# Clippy lints for the QNX target inside the image, and rustfmt formats.
 CARGO_HOME="$work/cargo-home" cargo clippy --offline --manifest-path "$work/host/Cargo.toml" \
     --target armv7-unknown-nto-qnx650 -- -D warnings
+cargo fmt --manifest-path "$work/host/Cargo.toml" --check
+# rustdoc and cargo-audit are present. The advisory database needs the
+# network, so only the tool itself is checked here.
+CARGO_HOME="$work/cargo-home" cargo doc --offline --manifest-path "$work/host/Cargo.toml" \
+    --target armv7-unknown-nto-qnx650 --no-deps
+cargo audit --version
 echo 'Compiler image checks passed'

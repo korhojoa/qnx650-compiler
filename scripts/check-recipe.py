@@ -39,6 +39,8 @@ for number, raw in enumerate(MANIFEST.read_text().splitlines(), 1):
         fail(f"sources.manifest:{number}: invalid SHA-256 for {name}")
     if kind == "git" and not re.fullmatch(r"[0-9a-f]{40}", revision):
         fail(f"sources.manifest:{number}: invalid commit for {name}")
+    if kind == "crate" and not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", revision):
+        fail(f"sources.manifest:{number}: invalid crate version for {name}")
     if upstream.startswith("http://"):
         fail(f"sources.manifest:{number}: insecure public URL for {name}")
 
@@ -56,6 +58,11 @@ require_text("build-toolchain.sh", rows["gcc-qnx"][2], "GCC 11 commit")
 require_text("Dockerfile.rust", rows["rust-1.94.1-qnx650"][2], "Rust commit")
 require_text("Dockerfile.rust", rows["rust-libc-0.2.189-qnx650"][2], "libc commit")
 require_text("Dockerfile.rust", rows["cc-rs-1.4.3-qnx650"][2], "cc-rs commit")
+require_text(
+    "Dockerfile.compiler",
+    f"CARGO_AUDIT_VERSION={rows['cargo-audit'][2]}",
+    "cargo-audit version",
+)
 require_text("runner/Dockerfile", rows["github-runner-2.337.0"][2], "runner SHA-256")
 require_text(
     "runner/Dockerfile", rows["github-runner-ubuntu-base"][2], "runner base digest"

@@ -1,7 +1,8 @@
 # Compiler image
 
 The compiler image supports ARM Rust archives and shared libraries for QNX 6.5.
-It contains Rust, Cargo, an ARM GNU compiler, and GNU binutils.
+It contains Rust, Cargo, Clippy, rustfmt, rustdoc, cargo-audit, an ARM GNU
+compiler, and GNU binutils.
 The final image starts from Ubuntu. It contains no QNX SDP tree or activation record.
 
 The build uses the existing source recipes in separate stages.
@@ -60,8 +61,11 @@ The small `stdio.h` declares only `vsnprintf` for existing variadic logging glue
 
 The image contains `python3` for build helper scripts that run inside it,
 together with `git`, `pkg-config` and the host C compiler for build scripts.
-`cargo clippy` works for the QNX target: the clippy driver is built with the
-same compiler.
+`cargo clippy` works for the QNX target, and `cargo fmt` and `cargo doc`
+are available: clippy, rustfmt and rustdoc are built with the same compiler.
+`cargo audit` is installed from crates.io at the version in
+`sources.manifest`; it fetches the advisory database itself, so a run
+needs the network.
 
 For a separate GNU link, use these inputs:
 
@@ -145,6 +149,9 @@ The applied patch hashes are in the adjacent `PATCHES.sha256` file.
 Ubuntu package notices remain in `/usr/share/doc`.
 The exact Ubuntu source packages are in `/usr/share/qnx-compiler/ubuntu-source`.
 That directory contains the package versions and source-file hashes.
+The crates that went into `cargo audit` are listed in
+`/usr/share/qnx-compiler/cargo-audit-notices/CRATES.txt`, with each crate's
+license files beside it.
 
 The `compiler` stage permits local build tests with an older toolchain.
 The `compiler-release` stage requires the distribution notices.
