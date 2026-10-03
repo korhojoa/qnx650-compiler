@@ -9,10 +9,11 @@ gcc-qnx-a07570b6             | tar   | gcc-qnx.tar.gz                      | 130
 gcc-qnx                      | git   | (fetched as an archive, not cloned) | a07570b654eb6e70adaf5af813b73799d94c9df8                         | https://github.com/bigunclemax/gcc.git | -
 ubuntu-base                  | image | (FROM in Dockerfile)                | sha256:678c6550cc43645e08669028bc177f50be4e7c5b8cca677067b1914d4afc7a03 | docker.io/library/ubuntu:26.04 | -
 frida-qnx-tools              | image | (FROM in Dockerfile.sdp-frida)      | sha256:65f1864ebbff521bcc6b2afd234d5679920b9466b4ba1d57be5d8f131993bfe2 | ghcr.io/frida/qnx-tools:latest | -
-rust-1.94.1-qnx650           | git   | rust-work/rust                       | e408947bfd200af42db322daf0fadfe7e26d3bd1                         | https://github.com/rust-lang/rust.git | -
+rust-1.99.0-qnx650           | git   | rust-work/rust                       | b940084d7eb6a299eb4bfeb8e34901bc051e7ac4                         | https://github.com/rust-lang/rust.git | -
+rust-ci-llvm-1.99.0          | tar   | rust-dev-beta-x86_64-unknown-linux-gnu.tar.xz | 5101e197006f166da80747b6cbb5bc05f40fdf9ac8226dd90ce8797173bbea1f | https://ci-artifacts.rust-lang.org/rustc-builds/fba1b05a7bd8bdc73080edd02f672cef44648267/rust-dev-beta-x86_64-unknown-linux-gnu.tar.xz | -
 rust-libc-0.2.189-qnx650     | git   | rust-work/libc                       | ef0906e20828777175f65caa7e681a0ce33c559a                         | https://github.com/rust-lang/libc.git | -
 cc-rs-1.4.3-qnx650           | git   | rust-work/cc-rs                      | 3c4ab883616b373c0287319d1a2f237aad0c79a0                         | https://github.com/rust-lang/cc-rs.git | -
-backtrace-rust-submodule     | git   | rust-work/rust/library/backtrace     | b65ab935fb2e0d59dba8966ffca09c9cc5a5f57c                         | https://github.com/rust-lang/backtrace-rs.git | -
+backtrace-rust-submodule     | git   | rust-work/rust/library/backtrace     | d902726a1dcdc1e1c66f73d1162181b5423c645b                         | https://github.com/rust-lang/backtrace-rs.git | -
 cargo-audit                  | crate | (cargo install in Dockerfile.compiler) | 0.22.2                                                       | https://crates.io/crates/cargo-audit | -
 qnxsdp-6.5.0-dvd             | tar   | qnxsdp-6.5.0-201007091524-dvd.iso   | c8701b45ae91b9ef760b66a9487f0397df2be8b4f7c40dd2851226db68045db8 | (QNX SDP 6.5.0 DVD, not downloadable)  | -
 github-runner-2.337.0 | tar | (GitHub runner archive) | 70920811a4f8ad4328818682bca5c6469c1c942fab52448868071d0063816613 | https://github.com/actions/runner/releases/download/v2.337.0/actions-runner-linux-x64-2.337.0.tar.gz | -

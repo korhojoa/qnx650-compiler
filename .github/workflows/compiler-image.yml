@@ -15,6 +15,14 @@ on:
         description: Parallel jobs for the Rust build (empty = one per CPU)
         type: string
         default: ''
+      rebuild:
+        description: Stages that can build without the layer cache
+        type: choice
+        options:
+          - none
+          - rust
+          - all
+        default: none
 
 permissions:
   contents: read
@@ -51,6 +59,8 @@ jobs:
       - name: Assemble and test the compiler image
         env:
           BUILD_JOBS: ${{ inputs.jobs }}
+          REBUILD: ${{ inputs.rebuild }}
+          INPUT_CACHE: ${{ runner.tool_cache }}/qnx650-compiler-inputs
         run: scripts/build-compiler-image.sh
       - name: Report the build storage growth
         if: always()

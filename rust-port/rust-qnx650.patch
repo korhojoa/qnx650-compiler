@@ -1,9 +1,9 @@
 diff --git a/Cargo.lock b/Cargo.lock
-index d83bdf76..9b289df5 100644
+index c91d3792531..fcd260e1aa2 100644
 --- a/Cargo.lock
 +++ b/Cargo.lock
-@@ -525,13 +525,12 @@ version = "0.1.0"
-
+@@ -543,13 +543,12 @@ version = "0.1.0"
+ 
  [[package]]
  name = "cc"
 -version = "1.2.16"
@@ -17,29 +17,29 @@ index d83bdf76..9b289df5 100644
 - "shlex",
 + "shlex 2.0.1",
  ]
-
+ 
  [[package]]
-@@ -1422,6 +1421,10 @@ version = "0.1.5"
+@@ -1441,6 +1440,10 @@ version = "0.1.5"
  source = "registry+https://github.com/rust-lang/crates.io-index"
  checksum = "3a3076410a55c90011c298b04d0cfa770b00fa04e1e3c97d3f6c9de105a03844"
-
+ 
 +[[package]]
 +name = "find-msvc-tools"
 +version = "0.1.11"
 +
  [[package]]
  name = "flate2"
- version = "1.1.5"
-@@ -2112,7 +2115,7 @@ dependencies = [
+ version = "1.1.9"
+@@ -2222,7 +2225,7 @@ dependencies = [
   "jsonpath-rust",
   "regex",
   "serde_json",
 - "shlex",
 + "shlex 1.3.0",
  ]
-
+ 
  [[package]]
-@@ -3658,7 +3661,7 @@ dependencies = [
+@@ -3844,7 +3847,7 @@ dependencies = [
   "ar_archive_writer",
   "bitflags",
   "bstr",
@@ -47,29 +47,38 @@ index d83bdf76..9b289df5 100644
 + "find-msvc-tools 0.1.5",
   "itertools",
   "libc",
-  "object 0.37.3",
-@@ -3814,7 +3817,7 @@ dependencies = [
-  "rustc_trait_selection",
-  "rustc_ty_utils",
+  "object 0.38.1",
+@@ -3995,7 +3998,7 @@ dependencies = [
+  "rustc_span",
+  "rustc_target",
   "serde_json",
 - "shlex",
 + "shlex 1.3.0",
   "tracing",
-  "windows",
+  "windows 0.61.3",
  ]
-@@ -4864,7 +4867,7 @@ dependencies = [
+@@ -4361,7 +4364,7 @@ version = "0.0.0"
+ dependencies = [
+  "cc",
+  "libc",
+- "shlex",
++ "shlex 1.3.0",
+ ]
+ 
+ [[package]]
+@@ -4997,7 +5000,7 @@ dependencies = [
  name = "rustc_windows_rc"
  version = "0.0.0"
  dependencies = [
 - "find-msvc-tools",
 + "find-msvc-tools 0.1.5",
  ]
-
+ 
  [[package]]
-@@ -5240,6 +5243,12 @@ version = "1.3.0"
+@@ -5374,6 +5377,12 @@ version = "1.3.0"
  source = "registry+https://github.com/rust-lang/crates.io-index"
  checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
-
+ 
 +[[package]]
 +name = "shlex"
 +version = "2.0.1"
@@ -80,18 +89,18 @@ index d83bdf76..9b289df5 100644
  name = "simd-adler32"
  version = "0.3.7"
 diff --git a/Cargo.toml b/Cargo.toml
-index 67c7a9d6..dd41671c 100644
+index 0d36c3f242d..7985d4c67d5 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -93,3 +93,6 @@ codegen-units = 1
+@@ -94,3 +94,6 @@ codegen-units = 1
  # For git dependencies, also add your source to ALLOWED_SOURCES in src/tools/tidy/src/extdeps.rs.
  #[patch.crates-io]
-
+ 
 +[patch.crates-io]
 +# QNX 6.5 port: cc-rs taught the qnx650/nto65 triple (rust-port/cc-qnx650.patch)
 +cc = { path = '../cc-rs' }
 diff --git a/compiler/rustc_llvm/Cargo.toml b/compiler/rustc_llvm/Cargo.toml
-index ad93c745..c6370d1a 100644
+index c9f8cd94958..b7f9c1a1782 100644
 --- a/compiler/rustc_llvm/Cargo.toml
 +++ b/compiler/rustc_llvm/Cargo.toml
 @@ -11,7 +11,7 @@ libc = "0.2.73"
@@ -100,17 +109,17 @@ index ad93c745..c6370d1a 100644
  # `cc` updates often break things, so we pin it here.
 -cc = "=1.2.16"
 +cc = "=1.4.3"
+ shlex = "1.3.0"
  # tidy-alphabetical-end
-
- [features]
-diff --git a/compiler/rustc_target/src/spec/base/nto_qnx.rs b/compiler/rustc_target/src/spec/base/nto_qnx.rs
-index 417ac0bc..cbd0e048 100644
---- a/compiler/rustc_target/src/spec/base/nto_qnx.rs
-+++ b/compiler/rustc_target/src/spec/base/nto_qnx.rs
-@@ -26,6 +26,20 @@ pub(crate) fn meta() -> TargetMetadata {
+ 
+diff --git a/compiler/rustc_target/src/spec/base/qnx_sdp.rs b/compiler/rustc_target/src/spec/base/qnx_sdp.rs
+index 417ac0bc018..2dd0abf0d19 100644
+--- a/compiler/rustc_target/src/spec/base/qnx_sdp.rs
++++ b/compiler/rustc_target/src/spec/base/qnx_sdp.rs
+@@ -26,6 +26,22 @@ pub(crate) fn meta() -> TargetMetadata {
      TargetMetadata { description: None, tier: Some(3), host_tools: Some(false), std: Some(true) }
  }
-
+ 
 +// QNX Neutrino 6.5.0: no qcc-4.4 linking -- links go through a modern GCC
 +// cross driver (which also injects the exidx-merge linker script the QNX
 +// EABI unwinder depends on). The 6.5 userland is non-PIE with no RELRO.
@@ -119,7 +128,9 @@ index 417ac0bc..cbd0e048 100644
 +        linker: Some(gcc_driver.into()),
 +        position_independent_executables: false,
 +        static_position_independent_executables: false,
-+        relro_level: RelroLevel::Off,
++        // None, not Off: Off passes `-z norelro`, which this linker reports
++        // as ignored on every link.
++        relro_level: RelroLevel::None,
 +        crt_static_respected: false,
 +        ..opts()
 +    }
@@ -129,19 +140,19 @@ index 417ac0bc..cbd0e048 100644
      Target {
          llvm_target: "aarch64-unknown-unknown".into(),
 diff --git a/compiler/rustc_target/src/spec/mod.rs b/compiler/rustc_target/src/spec/mod.rs
-index 57effe3a..c2547b3b 100644
+index 97c8db07807..e90b9e14573 100644
 --- a/compiler/rustc_target/src/spec/mod.rs
 +++ b/compiler/rustc_target/src/spec/mod.rs
-@@ -1776,6 +1776,8 @@ fn $module() {
+@@ -1799,6 +1799,8 @@ fn $module() {
      ("x86_64-pc-nto-qnx710_iosock", x86_64_pc_nto_qnx710_iosock),
-     ("x86_64-pc-nto-qnx800", x86_64_pc_nto_qnx800),
+     ("x86_64-pc-qnx", x86_64_pc_qnx),
      ("i686-pc-nto-qnx700", i686_pc_nto_qnx700),
 +    ("armv7-unknown-nto-qnx650", armv7_unknown_nto_qnx650),
 +    ("i586-pc-nto-qnx650", i586_pc_nto_qnx650),
-
+ 
      ("aarch64-unknown-linux-ohos", aarch64_unknown_linux_ohos),
      ("armv7-unknown-linux-ohos", armv7_unknown_linux_ohos),
-@@ -2013,6 +2015,7 @@ pub enum Env {
+@@ -2042,6 +2044,7 @@ pub enum Env {
          Msvc = "msvc",
          Musl = "musl",
          Newlib = "newlib",
@@ -151,11 +162,11 @@ index 57effe3a..c2547b3b 100644
          Nto71IoSock = "nto71_iosock",
 diff --git a/compiler/rustc_target/src/spec/targets/armv7_unknown_nto_qnx650.rs b/compiler/rustc_target/src/spec/targets/armv7_unknown_nto_qnx650.rs
 new file mode 100644
-index 00000000..12fff747
+index 00000000000..f7201c6112d
 --- /dev/null
 +++ b/compiler/rustc_target/src/spec/targets/armv7_unknown_nto_qnx650.rs
 @@ -0,0 +1,33 @@
-+use crate::spec::{Abi, Arch, Env, FloatAbi, Target, TargetOptions, base};
++use crate::spec::{Arch, CfgAbi, Env, FloatAbi, Target, TargetOptions, base};
 +
 +// ARMv7-A QNX Neutrino 6.5.0 (Cortex-A9 class hardware, strict alignment).
 +//
@@ -169,7 +180,7 @@ index 00000000..12fff747
 +//   in-libc EABI unwinder sees no unwind tables and every panic aborts).
 +
 +pub(crate) fn target() -> Target {
-+    let mut meta = base::nto_qnx::meta();
++    let mut meta = base::qnx_sdp::meta();
 +    meta.description = Some("Armv7-A QNX Neutrino 6.5.0 RTOS".into());
 +    meta.std = Some(true);
 +    Target {
@@ -179,18 +190,18 @@ index 00000000..12fff747
 +        data_layout: "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64".into(),
 +        arch: Arch::Arm,
 +        options: TargetOptions {
-+            abi: Abi::Eabi,
++            cfg_abi: CfgAbi::Eabi,
 +            llvm_floatabi: Some(FloatAbi::Soft),
 +            features: "+v7,+thumb2,+soft-float,+strict-align,-neon".into(),
 +            max_atomic_width: Some(64),
 +            env: Env::Nto65,
-+            ..base::nto_qnx::opts65("arm-unknown-nto-qnx6.5.0eabi-gcc")
++            ..base::qnx_sdp::opts65("arm-unknown-nto-qnx6.5.0eabi-gcc")
 +        },
 +    }
 +}
 diff --git a/compiler/rustc_target/src/spec/targets/i586_pc_nto_qnx650.rs b/compiler/rustc_target/src/spec/targets/i586_pc_nto_qnx650.rs
 new file mode 100644
-index 00000000..4a43bbbe
+index 00000000000..16e54b7d9ae
 --- /dev/null
 +++ b/compiler/rustc_target/src/spec/targets/i586_pc_nto_qnx650.rs
 @@ -0,0 +1,34 @@
@@ -205,7 +216,7 @@ index 00000000..4a43bbbe
 +// supported on the ARM (EHABI) target.
 +
 +pub(crate) fn target() -> Target {
-+    let mut meta = base::nto_qnx::meta();
++    let mut meta = base::qnx_sdp::meta();
 +    meta.description = Some("32-bit x86 QNX Neutrino 6.5.0 RTOS".into());
 +    meta.std = Some(true);
 +    Target {
@@ -224,16 +235,16 @@ index 00000000..4a43bbbe
 +            vendor: "pc".into(),
 +            stack_probes: StackProbeType::Inline,
 +            panic_strategy: PanicStrategy::Abort,
-+            ..base::nto_qnx::opts65("i386-pc-nto-qnx6.5.0-gcc")
++            ..base::qnx_sdp::opts65("i386-pc-nto-qnx6.5.0-gcc")
 +        },
 +    }
 +}
 diff --git a/library/Cargo.lock b/library/Cargo.lock
-index f6c14bc5..ed6545ff 100644
+index d029173e807..0da2f124cd5 100644
 --- a/library/Cargo.lock
 +++ b/library/Cargo.lock
 @@ -40,10 +40,9 @@ dependencies = [
-
+ 
  [[package]]
  name = "cc"
 -version = "1.2.0"
@@ -244,11 +255,11 @@ index f6c14bc5..ed6545ff 100644
 + "find-msvc-tools",
   "shlex",
  ]
-
+ 
 @@ -88,6 +87,10 @@ dependencies = [
   "windows-sys",
  ]
-
+ 
 +[[package]]
 +name = "find-msvc-tools"
 +version = "0.1.11"
@@ -256,19 +267,17 @@ index f6c14bc5..ed6545ff 100644
  [[package]]
  name = "foldhash"
  version = "0.2.0"
-@@ -146,9 +149,7 @@ dependencies = [
-
+@@ -147,8 +150,6 @@ dependencies = [
  [[package]]
  name = "libc"
--version = "0.2.178"
+ version = "0.2.189"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
--checksum = "37c93d8daa9d8a012fd8ab92f088405fb202ea0b6ab73ee2482ae66af4f42091"
-+version = "0.2.189"
+-checksum = "3eaf3ede3fee6db1a4c2ee091bf8a8b4dccdc6d17f656fb07896ee72867612f2"
  dependencies = [
   "rustc-std-workspace-core",
  ]
 @@ -314,9 +315,9 @@ dependencies = [
-
+ 
  [[package]]
  name = "shlex"
 -version = "1.3.0"
@@ -276,33 +285,33 @@ index f6c14bc5..ed6545ff 100644
  source = "registry+https://github.com/rust-lang/crates.io-index"
 -checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 +checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
-
+ 
  [[package]]
  name = "std"
 diff --git a/library/Cargo.toml b/library/Cargo.toml
-index e30e6240..039aaec2 100644
+index 788c990c163..5148321f146 100644
 --- a/library/Cargo.toml
 +++ b/library/Cargo.toml
-@@ -59,3 +59,7 @@ rustflags = ["-Cpanic=abort"]
- rustc-std-workspace-core = { path = 'rustc-std-workspace-core' }
- rustc-std-workspace-alloc = { path = 'rustc-std-workspace-alloc' }
- rustc-std-workspace-std = { path = 'rustc-std-workspace-std' }
+@@ -88,3 +88,7 @@ rustc-std-workspace-std = { path = 'rustc-std-workspace-std' }
+ 
+ # See comments in `library/windows-sys/Cargo.toml` for why this is patched
+ windows-sys = { path = 'windows-sys' }
 +# QNX 6.5 port: libc with nto65 support (rust-port/libc-qnx650.patch applied
 +# to the pinned libc commit)
 +libc = { path = '../../libc' }
 +cc = { path = '../../cc-rs' }
 diff --git a/library/profiler_builtins/Cargo.toml b/library/profiler_builtins/Cargo.toml
-index e075a38d..00a53554 100644
+index e075a38daea..00a535544bf 100644
 --- a/library/profiler_builtins/Cargo.toml
 +++ b/library/profiler_builtins/Cargo.toml
 @@ -12,4 +12,4 @@ doc = false
-
+ 
  [build-dependencies]
  # Pinned so `cargo update` bumps don't cause breakage
 -cc = "=1.2.0"
 +cc = "=1.4.3"
 diff --git a/library/std/src/os/fd/owned.rs b/library/std/src/os/fd/owned.rs
-index 8a39fe07..77b98589 100644
+index 4ed5c43616a..e730be7e491 100644
 --- a/library/std/src/os/fd/owned.rs
 +++ b/library/std/src/os/fd/owned.rs
 @@ -114,19 +114,41 @@ pub fn try_clone_to_owned(&self) -> io::Result<OwnedFd> {
@@ -312,7 +321,7 @@ index 8a39fe07..77b98589 100644
 -        #[cfg(not(any(target_os = "espidf", target_os = "vita")))]
 +        #[cfg(not(any(target_os = "espidf", target_os = "vita", target_env = "nto65")))]
          let cmd = libc::F_DUPFD_CLOEXEC;
-
+ 
          // For ESP-IDF, F_DUPFD is used instead, because the CLOEXEC semantics
          // will never be supported, as this is a bare metal framework with
          // no capabilities for multi-process execution. While F_DUPFD is also
@@ -325,7 +334,7 @@ index 8a39fe07..77b98589 100644
 +        // meaningful on this platform: it spawns processes via posix_spawn.
 +        #[cfg(any(target_os = "espidf", target_os = "vita", target_env = "nto65"))]
          let cmd = libc::F_DUPFD;
-
+ 
          // Avoid using file descriptors below 3 as they are used for stdio
          let fd = cvt(unsafe { libc::fcntl(self.as_raw_fd(), cmd, 3) })?;
 -        Ok(unsafe { OwnedFd::from_raw_fd(fd) })
@@ -348,10 +357,10 @@ index 8a39fe07..77b98589 100644
 +
 +        Ok(fd)
      }
-
+ 
      /// Creates a new `OwnedFd` instance that shares the same underlying file
 diff --git a/library/std/src/os/nto/fs.rs b/library/std/src/os/nto/fs.rs
-index d371936c..d2e227f0 100644
+index d371936c433..d2e227f09ff 100644
 --- a/library/std/src/os/nto/fs.rs
 +++ b/library/std/src/os/nto/fs.rs
 @@ -65,24 +65,57 @@ fn st_rdev(&self) -> u64 {
@@ -413,7 +422,7 @@ index d371936c..d2e227f0 100644
          self.as_inner().as_inner().st_blksize as u64
      }
 diff --git a/library/std/src/sys/fd/unix.rs b/library/std/src/sys/fd/unix.rs
-index bb6c0ac9..44106f79 100644
+index d35a001bb6b..9a852f4eadf 100644
 --- a/library/std/src/sys/fd/unix.rs
 +++ b/library/std/src/sys/fd/unix.rs
 @@ -8,6 +8,7 @@
@@ -431,50 +440,34 @@ index bb6c0ac9..44106f79 100644
 +    target_env = "nto65",
  ))]
  use libc::off64_t;
-
-@@ -28,6 +30,10 @@
-         // #[cfg(gnu_file_offset_bits64)].
+ 
+@@ -50,6 +52,11 @@ pub unsafe fn pwrite64(
          use libc::pread64;
+         use libc::pwrite64;
      }
 +    // QNX 6.5's plain `pread` takes a 32-bit off_t (see sys/fs/unix.rs).
 +    target_env = "nto65" => {
 +        use libc::pread64;
++        use libc::pwrite64;
 +    }
      _ => {
          use libc::pread as pread64;
-     }
-@@ -394,13 +400,16 @@ pub fn write_at(&self, buf: &[u8], offset: u64) -> io::Result<usize> {
-         #[cfg(not(any(
-             all(target_os = "linux", not(target_env = "musl")),
-             target_os = "android",
--            target_os = "hurd"
-+            target_os = "hurd",
-+            target_env = "nto65",
-         )))]
          use libc::pwrite as pwrite64;
-+        // nto65: the plain `pwrite` takes a 32-bit off_t (see sys/fs/unix.rs).
-         #[cfg(any(
-             all(target_os = "linux", not(target_env = "musl")),
-             target_os = "android",
--            target_os = "hurd"
-+            target_os = "hurd",
-+            target_env = "nto65",
-         ))]
-         use libc::pwrite64;
-
 diff --git a/library/std/src/sys/fs/unix.rs b/library/std/src/sys/fs/unix.rs
-index ca9d3fd5..261f4c64 100644
+index cdd1ef6146f..4369367bbe9 100644
 --- a/library/std/src/sys/fs/unix.rs
 +++ b/library/std/src/sys/fs/unix.rs
-@@ -66,11 +66,25 @@
-     target_os = "l4re",
+@@ -32,6 +32,7 @@
      target_os = "android",
      target_os = "hurd",
+     target_os = "l4re",
 +    target_env = "nto65",
  )))]
  use libc::{
      dirent as dirent64, fstat as fstat64, ftruncate as ftruncate64, lseek as lseek64,
-     lstat as lstat64, off_t as off64_t, open as open64, stat as stat64,
+@@ -42,6 +43,19 @@
+     dirent64, fstat as fstat64, ftruncate as ftruncate64, lseek as lseek64, lstat as lstat64,
+     off_t as off64_t, open as open64, stat as stat64,
  };
 +// QNX 6.5 defaults to _FILE_OFFSET_BITS=32, so `off_t` is i32 and the plain
 +// lseek/ftruncate/open cannot address past 2 GiB -- `File::set_len(4 GiB)` used
@@ -489,13 +482,13 @@ index ca9d3fd5..261f4c64 100644
 +// that path is device-validated.
 +#[cfg(target_env = "nto65")]
 +use libc::{dirent as dirent64, fstat64, ftruncate64, lseek64, lstat64, off64_t, open64, stat64};
- #[cfg(any(
-     all(target_os = "linux", not(target_env = "musl")),
-     target_os = "l4re",
-@@ -568,10 +582,32 @@ fn from_stat64(stat: stat64) -> Self {
+ #[cfg(any(all(target_os = "linux", not(target_env = "musl")), target_os = "hurd"))]
+ use libc::{dirent64, fstat64, ftruncate64, lseek64, lstat64, off64_t, open64, stat64};
+ 
+@@ -514,10 +528,32 @@ fn from_stat64(stat: stat64) -> Self {
      }
  }}
-
+ 
 +/// Join the two halves of a QNX 6.5 split 64-bit `dirent` field.
 +///
 +/// With the platform default `_FILE_OFFSET_BITS=32`, QNX 6.5 stores each
@@ -525,19 +518,24 @@ index ca9d3fd5..261f4c64 100644
      pub fn perm(&self) -> FilePermissions {
          FilePermissions { mode: (self.stat.st_mode as mode_t) }
      }
-@@ -726,7 +762,7 @@ pub fn created(&self) -> io::Result<SystemTime> {
+@@ -689,7 +725,12 @@ pub fn created(&self) -> io::Result<SystemTime> {
      }
  }
-
--#[cfg(any(target_os = "nto", target_os = "wasi"))]
-+#[cfg(any(all(target_os = "nto", not(target_env = "nto65")), target_os = "wasi"))]
+ 
+-#[cfg(any(target_os = "nto", target_os = "qnx", target_os = "wasi", target_os = "l4re"))]
++#[cfg(any(
++    all(target_os = "nto", not(target_env = "nto65")),
++    target_os = "qnx",
++    target_os = "wasi",
++    target_os = "l4re",
++))]
  impl FileAttr {
      pub fn modified(&self) -> io::Result<SystemTime> {
          SystemTime::new(self.stat.st_mtim.tv_sec, self.stat.st_mtim.tv_nsec.into())
-@@ -741,6 +777,26 @@ pub fn created(&self) -> io::Result<SystemTime> {
+@@ -704,6 +745,26 @@ pub fn created(&self) -> io::Result<SystemTime> {
      }
  }
-
+ 
 +// QNX 6.5: stat timestamps are whole (unsigned 32-bit) seconds -- the
 +// platform simply has no sub-second file times.
 +#[cfg(target_env = "nto65")]
@@ -561,22 +559,28 @@ index ca9d3fd5..261f4c64 100644
  impl AsInner<stat64> for FileAttr {
      #[inline]
      fn as_inner(&self) -> &stat64 {
-@@ -910,7 +966,12 @@ fn next(&mut self) -> Option<io::Result<DirEntry>> {
-                 let entry = dirent64_min {
-                     #[cfg(target_os = "freebsd")]
+@@ -919,6 +980,11 @@ fn next(&mut self) -> Option<io::Result<DirEntry>> {
                      d_ino: (*entry_ptr).d_fileno,
--                    #[cfg(not(target_os = "freebsd"))]
+                     #[cfg(any(target_os = "nuttx", target_os = "vita",))]
+                     d_ino: 0,
 +                    // QNX 6.5 splits the inode across `d_ino`/`d_ino_hi`; using
 +                    // the low word alone can collide and can disagree with the
 +                    // inode `metadata()` reports for the same file.
 +                    #[cfg(target_env = "nto65")]
 +                    d_ino: nto65_join64((*entry_ptr).d_ino as u32, (*entry_ptr).d_ino_hi as u32),
-+                    #[cfg(not(any(target_os = "freebsd", target_env = "nto65")))]
+                     #[cfg(not(any(
+                         target_os = "dragonfly",
+                         target_os = "freebsd",
+@@ -926,6 +992,7 @@ fn next(&mut self) -> Option<io::Result<DirEntry>> {
+                         target_os = "nuttx",
+                         target_os = "openbsd",
+                         target_os = "vita",
++                        target_env = "nto65",
+                     )))]
                      d_ino: (*entry_ptr).d_ino as u64,
                      #[cfg(not(any(
-                         target_os = "solaris",
-@@ -1781,6 +1842,14 @@ pub fn set_permissions(&self, perm: FilePermissions) -> io::Result<()> {
-
+@@ -1557,6 +1624,14 @@ pub fn set_permissions(&self, perm: FilePermissions) -> io::Result<()> {
+ 
      pub fn set_times(&self, times: FileTimes) -> io::Result<()> {
          cfg_select! {
 +            // QNX 6.5 has no futimens (nor any fd-based file-times call).
@@ -587,10 +591,10 @@ index ca9d3fd5..261f4c64 100644
 +                    "setting file times on an open file is not supported on QNX 6.5",
 +                ))
 +            }
-             any(target_os = "redox", target_os = "espidf", target_os = "horizon", target_os = "nuttx") => {
+             any(target_os = "redox", target_os = "espidf", target_os = "horizon", target_os = "nuttx", target_os = "l4re") => {
                  // Redox doesn't appear to support `UTIME_OMIT`.
                  // ESP-IDF and HorizonOS do not support `futimens` at all and the behavior for those OS is therefore
-@@ -1851,6 +1920,7 @@ pub fn set_times(&self, times: FileTimes) -> io::Result<()> {
+@@ -1627,6 +1702,7 @@ pub fn set_times(&self, times: FileTimes) -> io::Result<()> {
      target_os = "horizon",
      target_os = "nuttx",
  )))]
@@ -598,16 +602,27 @@ index ca9d3fd5..261f4c64 100644
  fn file_time_to_timespec(time: Option<SystemTime>) -> io::Result<libc::timespec> {
      match time {
          Some(time) if let Some(ts) = time.t.to_timespec() => Ok(ts),
-@@ -2139,6 +2209,7 @@ pub fn link(original: &CStr, link: &CStr) -> io::Result<()> {
-             target_os = "horizon",
+@@ -1891,6 +1967,10 @@ pub fn set_perm_nofollow(p: &CStr, perm: FilePermissions) -> io::Result<()> {
+             })
+             .map(|_| ())
+         },
++        // QNX 6.5 has no fchmodat. Without flags, that call is chmod.
++        target_env = "nto65" => {
++            cvt_r(|| unsafe { libc::chmod(p.as_ptr(), perm.mode) }).map(|_| ())
++        }
+         _ => {
+             cvt_r(|| unsafe {
+                 libc::fchmodat(libc::AT_FDCWD, p.as_ptr(), perm.mode, 0)
+@@ -1949,6 +2029,7 @@ pub fn link(original: &CStr, link: &CStr) -> io::Result<()> {
              target_os = "vita",
+             target_os = "l4re",
              target_env = "nto70",
 +            target_env = "nto65",
          ) => {
              cvt(unsafe { libc::link(original.as_ptr(), link.as_ptr()) })?;
          }
-@@ -2211,6 +2282,38 @@ fn open_from(from: &Path) -> io::Result<(crate::fs::File, crate::fs::Metadata)>
-
+@@ -2021,6 +2102,38 @@ fn open_from(from: &Path) -> io::Result<(crate::fs::File, crate::fs::Metadata)>
+ 
  fn set_times_impl(p: &CStr, times: FileTimes, follow_symlinks: bool) -> io::Result<()> {
      cfg_select! {
 +       // QNX 6.5: no utimensat/futimens/lutimes -- only whole-second,
@@ -646,7 +661,7 @@ index ca9d3fd5..261f4c64 100644
              let _ = (p, times, follow_symlinks);
              Err(io::const_error!(
 diff --git a/library/std/src/sys/net/connection/socket/unix.rs b/library/std/src/sys/net/connection/socket/unix.rs
-index 5e20c0ff..1f4a8595 100644
+index 3062d53d879..f5b47aff26f 100644
 --- a/library/std/src/sys/net/connection/socket/unix.rs
 +++ b/library/std/src/sys/net/connection/socket/unix.rs
 @@ -75,7 +75,7 @@ pub fn new(family: c_int, ty: c_int) -> io::Result<Socket> {
@@ -655,27 +670,50 @@ index 5e20c0ff..1f4a8595 100644
                  target_os = "cygwin",
 -                target_os = "nto",
 +                all(target_os = "nto", not(target_env = "nto65")),
+                 target_os = "qnx",
                  target_os = "solaris",
              ) => {
-                 // On platforms that support it we pass the SOCK_CLOEXEC
-@@ -123,7 +123,7 @@ pub fn new_pair(fam: c_int, ty: c_int) -> io::Result<(Socket, Socket)> {
+@@ -124,7 +124,7 @@ pub fn new_pair(fam: c_int, ty: c_int) -> io::Result<(Socket, Socket)> {
                      target_os = "netbsd",
                      target_os = "openbsd",
                      target_os = "cygwin",
 -                    target_os = "nto",
 +                    all(target_os = "nto", not(target_env = "nto65")),
+                     target_os = "qnx",
                  ) => {
                      // Like above, set cloexec atomically
-                     cvt(libc::socketpair(fam, ty | libc::SOCK_CLOEXEC, 0, fds.as_mut_ptr()))?;
-diff --git a/library/std/src/sys/pal/unix/os.rs b/library/std/src/sys/pal/unix/os.rs
-index b8280a8f..ae96b184 100644
---- a/library/std/src/sys/pal/unix/os.rs
-+++ b/library/std/src/sys/pal/unix/os.rs
-@@ -272,7 +272,29 @@ pub fn current_exe() -> io::Result<PathBuf> {
+diff --git a/library/std/src/sys/pal/unix/time.rs b/library/std/src/sys/pal/unix/time.rs
+index 9c4ba9f5f38..bf8539d3d8e 100644
+--- a/library/std/src/sys/pal/unix/time.rs
++++ b/library/std/src/sys/pal/unix/time.rs
+@@ -16,12 +16,17 @@
+ 
+ // This additional constant is only used when calling
+ // `libc::pthread_cond_timedwait`.
+-#[cfg(any(target_os = "nto", target_os = "qnx"))]
++#[cfg(any(all(target_os = "nto", not(target_env = "nto65")), target_os = "qnx"))]
+ pub(in crate::sys) const TIMESPEC_MAX_CAPPED: libc::timespec = libc::timespec {
+     tv_sec: (u64::MAX / NSEC_PER_SEC) as i64,
+     tv_nsec: (u64::MAX % NSEC_PER_SEC) as i64,
+ };
+ 
++// QNX 6.5's unsigned 32-bit time_t saturates far below the u64-nanosecond
++// overflow the cap above guards against, so TIMESPEC_MAX already fits.
++#[cfg(target_env = "nto65")]
++pub(in crate::sys) const TIMESPEC_MAX_CAPPED: libc::timespec = TIMESPEC_MAX;
++
+ #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+ pub(crate) struct Timespec {
+     pub tv_sec: i64,
+diff --git a/library/std/src/sys/paths/unix.rs b/library/std/src/sys/paths/unix.rs
+index e023451b13c..e9e73a9389f 100644
+--- a/library/std/src/sys/paths/unix.rs
++++ b/library/std/src/sys/paths/unix.rs
+@@ -282,7 +282,29 @@ pub fn current_exe() -> io::Result<PathBuf> {
      }
  }
-
--#[cfg(target_os = "nto")]
+ 
+-#[cfg(any(target_os = "nto", target_os = "qnx"))]
 +// QNX 6.5's procfs has no exefile node (added in QNX 7); libc tracks the
 +// command path and hands it out via _cmdname().
 +#[cfg(target_env = "nto65")]
@@ -698,53 +736,17 @@ index b8280a8f..ae96b184 100644
 +    }
 +}
 +
-+#[cfg(all(target_os = "nto", not(target_env = "nto65")))]
++#[cfg(any(all(target_os = "nto", not(target_env = "nto65")), target_os = "qnx"))]
  pub fn current_exe() -> io::Result<PathBuf> {
      let mut e = crate::fs::read("/proc/self/exefile")?;
-     // Current versions of QNX Neutrino provide a null-terminated path.
-diff --git a/library/std/src/sys/pal/unix/time.rs b/library/std/src/sys/pal/unix/time.rs
-index 50b69025..9aa165a6 100644
---- a/library/std/src/sys/pal/unix/time.rs
-+++ b/library/std/src/sys/pal/unix/time.rs
-@@ -12,12 +12,17 @@
-
- // This additional constant is only used when calling
- // `libc::pthread_cond_timedwait`.
--#[cfg(target_os = "nto")]
-+#[cfg(all(target_os = "nto", not(target_env = "nto65")))]
- pub(in crate::sys) const TIMESPEC_MAX_CAPPED: libc::timespec = libc::timespec {
-     tv_sec: (u64::MAX / NSEC_PER_SEC) as i64,
-     tv_nsec: (u64::MAX % NSEC_PER_SEC) as i64,
- };
-
-+// QNX 6.5's unsigned 32-bit time_t saturates far below the u64-nanosecond
-+// overflow the cap above guards against, so TIMESPEC_MAX already fits.
-+#[cfg(target_env = "nto65")]
-+pub(in crate::sys) const TIMESPEC_MAX_CAPPED: libc::timespec = TIMESPEC_MAX;
-+
- #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
- pub struct SystemTime {
-     pub(crate) t: Timespec,
-diff --git a/library/std/src/sys/process/unix/unix.rs b/library/std/src/sys/process/unix/unix.rs
-index 460d5ec0..5f32bb1c 100644
---- a/library/std/src/sys/process/unix/unix.rs
-+++ b/library/std/src/sys/process/unix/unix.rs
-@@ -749,7 +749,7 @@ fn drop(&mut self) {
-             if self.get_setsid() {
-                 cfg_select! {
-                     all(target_os = "linux", target_env = "gnu") => {
--                        flags |= libc::POSIX_SPAWN_SETSID;
-+                        flags |= libc::POSIX_SPAWN_SETSID as libc::c_int;
-                     }
-                     _ => {
-                         return Ok(None);
+     // Current versions of QNX SDP provide a null-terminated path.
 diff --git a/library/unwind/src/lib.rs b/library/unwind/src/lib.rs
-index cff2aa7b..0bc2bc6e 100644
+index 69b5e81a392..35978816070 100644
 --- a/library/unwind/src/lib.rs
 +++ b/library/unwind/src/lib.rs
-@@ -196,6 +196,21 @@
-
- #[cfg(target_os = "nto")]
+@@ -202,6 +202,21 @@
+ 
+ #[cfg(any(target_os = "nto", target_os = "qnx"))]
  cfg_select! {
 +    // QNX 6.5 ships no libgcc_s at all. On ARM the EABI unwinder (all
 +    // _Unwind_* entry points) lives in libc.so.3 itself, found via
@@ -765,35 +767,33 @@ index cff2aa7b..0bc2bc6e 100644
          #[link(name = "gcc")]
          unsafe extern "C" {}
 diff --git a/src/bootstrap/Cargo.lock b/src/bootstrap/Cargo.lock
-index 884f67e9..757138db 100644
+index be130f32091..32650118592 100644
 --- a/src/bootstrap/Cargo.lock
 +++ b/src/bootstrap/Cargo.lock
-@@ -95,10 +95,9 @@ dependencies = [
-
+@@ -96,9 +96,7 @@ dependencies = [
+ 
  [[package]]
  name = "cc"
--version = "1.2.28"
+-version = "1.2.62"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
--checksum = "4ad45f4f74e4e20eaa392913b7b33a7091c87e59628f4dd27888205ad888843c"
+-checksum = "a1dce859f0832a7d088c4f1119888ab94ef4b5d6795d1ce05afb7fe159d79f98"
 +version = "1.4.3"
  dependencies = [
-+ "find-msvc-tools",
+  "find-msvc-tools",
   "shlex",
- ]
-
-@@ -279,6 +278,10 @@ dependencies = [
-  "windows-sys 0.60.2",
- ]
-
-+[[package]]
-+name = "find-msvc-tools"
+@@ -275,9 +273,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "find-msvc-tools"
+-version = "0.1.9"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582"
 +version = "0.1.11"
-+
+ 
  [[package]]
  name = "generic-array"
- version = "0.14.7"
-@@ -714,9 +717,9 @@ dependencies = [
-
+@@ -678,9 +674,9 @@ dependencies = [
+ 
  [[package]]
  name = "shlex"
 -version = "1.3.0"
@@ -801,23 +801,23 @@ index 884f67e9..757138db 100644
  source = "registry+https://github.com/rust-lang/crates.io-index"
 -checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 +checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
-
+ 
  [[package]]
  name = "similar"
 diff --git a/src/bootstrap/Cargo.toml b/src/bootstrap/Cargo.toml
-index e66c0576..3023bb93 100644
+index bdbdbade90f..9f756abf9f7 100644
 --- a/src/bootstrap/Cargo.toml
 +++ b/src/bootstrap/Cargo.toml
 @@ -32,7 +32,7 @@ test = false
  # Most of the time updating these dependencies requires modifications to the
  # bootstrap codebase(e.g., https://github.com/rust-lang/rust/issues/124565);
  # otherwise, some targets will fail. That's why these dependencies are explicitly pinned.
--cc = "=1.2.28"
+-cc = "=1.2.62"
 +cc = "=1.4.3"
  cmake = "=0.1.54"
-
- build_helper = { path = "../build_helper" }
-@@ -94,3 +94,7 @@ debug = 0
+ 
+ # tidy-alphabetical-start
+@@ -99,3 +99,7 @@ debug = 0
  [profile.dev.package]
  # Only use debuginfo=1 to further reduce compile times.
  bootstrap.debug = 1
@@ -825,29 +825,15 @@ index e66c0576..3023bb93 100644
 +[patch.crates-io]
 +# QNX 6.5 port: cc-rs taught the qnx650/nto65 triple (rust-port/cc-qnx650.patch)
 +cc = { path = '../../../cc-rs' }
-diff --git a/src/bootstrap/src/core/build_steps/llvm.rs b/src/bootstrap/src/core/build_steps/llvm.rs
-index c3935d98..8b34161e 100644
---- a/src/bootstrap/src/core/build_steps/llvm.rs
-+++ b/src/bootstrap/src/core/build_steps/llvm.rs
-@@ -1645,7 +1645,6 @@ fn run(self, builder: &Builder<'_>) -> Self::Output {
-             cfg.out_dir(&out_dir);
-
-             if self.target.contains("x86_64-fortanix-unknown-sgx") {
--                cfg.static_flag(true);
-                 cfg.flag("-fno-stack-protector");
-                 cfg.flag("-ffreestanding");
-                 cfg.flag("-fexceptions");
-diff --git a/src/bootstrap/src/utils/cc_detect.rs b/src/bootstrap/src/utils/cc_detect.rs
-index 0662ae30..52cc3f8d 100644
---- a/src/bootstrap/src/utils/cc_detect.rs
-+++ b/src/bootstrap/src/utils/cc_detect.rs
-@@ -48,9 +48,6 @@ fn new_cc_build(build: &Build, target: TargetSelection) -> cc::Build {
-             if target.is_msvc() {
-                 cfg.static_crt(true);
-             }
--            if target.contains("musl") {
--                cfg.static_flag(true);
--            }
-         }
-     }
-     cfg
+diff --git a/src/librustdoc/clean/cfg.rs b/src/librustdoc/clean/cfg.rs
+index 04dd0eaf228..600251da433 100644
+--- a/src/librustdoc/clean/cfg.rs
++++ b/src/librustdoc/clean/cfg.rs
+@@ -719,6 +719,7 @@ fn human_readable_target_env(env: Symbol) -> Option<&'static str> {
+         Msvc => "MSVC",
+         Musl => "musl",
+         Newlib => "Newlib",
++        Nto65 => "QNX SDP 6.5",
+         Nto70 => "QNX SDP 7.0",
+         Nto71 => "QNX SDP 7.1",
+         Nto71IoSock => "QNX SDP 7.1 with io-sock",

@@ -50,6 +50,10 @@ The GitHub `compiler image` workflow runs on a runner with the
 `qnx650-compiler` label by default. The workflow runs only on the default
 branch and starts only through manual dispatch.
 
+The `rebuild` input gives the stages that can build without the layer cache.
+With the default value `none`, a step of the GNU or Rust stages that has no
+cached layer stops the run. Set `rust` or `all` to let those stages build.
+
 Set `publish` to `true` to upload the checked final image to GHCR.
 GitHub creates a new package with private visibility. After the first upload,
 set its visibility to Public in the package settings. Run the `public image

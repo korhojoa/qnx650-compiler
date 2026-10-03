@@ -35,4 +35,33 @@ if "$TMP/verify/verify-sha.sh" "$TMP/verify/fixture.tar" >/dev/null 2>&1; then
     exit 1
 fi
 
+# build-compiler-image: REBUILD selects the stages that get the cache gate.
+mkdir -p "$TMP/build/scripts" "$TMP/bin"
+cp "$ROOT/scripts/build-compiler-image.sh" "$ROOT/scripts/refuse-uncached-step.sh" \
+    "$TMP/build/scripts/"
+printf '#!/bin/sh\n' > "$TMP/build/fetch-inputs.sh"
+printf '#!/bin/sh\necho "$*" >> "$PODMAN_LOG"\n' > "$TMP/bin/podman"
+chmod +x "$TMP/build/fetch-inputs.sh" "$TMP/bin/podman"
+gated_stages() {
+    PODMAN_LOG="$TMP/podman.log"
+    : > "$PODMAN_LOG"
+    PODMAN_LOG="$PODMAN_LOG" PATH="$TMP/bin:$PATH" REBUILD="$1" BUILD_JOBS=1 \
+        "$TMP/build/scripts/build-compiler-image.sh" >/dev/null
+    grep -F 'refuse-uncached-step.sh:/bin/sh:ro' "$PODMAN_LOG" |
+        grep -o 'Dockerfile[.a-z0-9-]*' | paste -sd' ' -
+}
+[[ $(gated_stages all) == "" ]]
+[[ $(gated_stages rust) == "Dockerfile.sdp-frida Dockerfile.tools Dockerfile.gcc16" ]]
+[[ $(gated_stages none) == \
+    "Dockerfile.sdp-frida Dockerfile.tools Dockerfile.gcc16 Dockerfile.rust" ]]
+if gated_stages other >/dev/null 2>&1; then
+    echo "build-compiler-image accepted an unknown REBUILD value" >&2
+    exit 1
+fi
+if "$ROOT/scripts/refuse-uncached-step.sh" -c 'make all' 2>"$TMP/gate.err"; then
+    echo "refuse-uncached-step permitted a step" >&2
+    exit 1
+fi
+grep -Fq 'make all' "$TMP/gate.err"
+
 echo "script tests passed"

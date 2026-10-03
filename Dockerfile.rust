@@ -3,12 +3,14 @@
 # A `rust-builder` stage compiles rustc + std for the QNX targets from source
 # and assembles its installation prefix in a separate stage.
 # All the build cruft (the multi-GB rust checkout, x.py build tree, downloaded
-# stage0 and the LLVM build) stays in the discarded builder layer.
+# stage0 and the LLVM archive) stays in the discarded builder layer.
 #
-# LLVM: the builder compiles LLVM from the pinned llvm-project submodule, with
-# the ARM and X86 backends only. The CI LLVM for this Rust commit is no longer
-# available for download, and the release has no rust-dev package.
-# link-shared=true keeps the libLLVM.so.* file that the dist step copies.
+# LLVM: the builder does not compile LLVM. It uses the LLVM that Rust CI built
+# for this Rust release (download-ci-llvm). fetch-inputs.sh downloads that
+# archive and checks it against sources.manifest. The upstream server removes
+# the archive on 2027-02-26. After that date, one of these is necessary for
+# a build: a copy of the archive, a newer Rust release, or
+# download-ci-llvm = false.
 #
 #   podman build -f Dockerfile.rust -t qnx650-build:rust .
 #
@@ -30,7 +32,9 @@ ARG BUILD_JOBS=4
 # Fetch pinned source commits. Do not substitute mutable tags.
 ARG LIBC_COMMIT=ef0906e20828777175f65caa7e681a0ce33c559a
 ARG CCRS_COMMIT=3c4ab883616b373c0287319d1a2f237aad0c79a0
-ARG RUST_COMMIT=e408947bfd200af42db322daf0fadfe7e26d3bd1
+ARG RUST_COMMIT=b940084d7eb6a299eb4bfeb8e34901bc051e7ac4
+# The Rust commit whose CI run built the LLVM archive.
+ARG CI_LLVM_COMMIT=fba1b05a7bd8bdc73080edd02f672cef44648267
 
 # The tracked recipe inputs (patches + target JSONs), COPYed rather than mounted.
 COPY rust-port /work/rust-port
@@ -53,7 +57,7 @@ RUN set -eux; \
 
 # CRITICAL: init library/backtrace to its pinned commit BEFORE applying the
 # patch above. A fresh `git clone` leaves submodules uninitialised, and x.py
-# would then clone library/backtrace fresh at build time (clean b65ab935),
+# would then clone library/backtrace fresh at build time (clean d902726a),
 # discarding the patch and producing a std that references dl_iterate_phdr /
 # _Unwind_GetIP (absent on QNX 6.5) -> anything linking std backtrace fails.
 # With the submodule already at the pinned commit + the patch applied (dirty),
@@ -84,10 +88,15 @@ ENV PATH=/opt/gcc16/bin:/opt/gcc11/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:
     CARGO_HOME=/work/rust-work/xpy-cargo-home \
     BOOTSTRAP_SKIP_TARGET_SANITY=1 \
     CFLAGS_armv7_unknown_nto_qnx650="-mno-unaligned-access -O2"
-# Three layers in cost order (LLVM, compiler, library and tools), so a
-# change to a cheap step does not rebuild an expensive one.
+# x.py finds the LLVM archive in its download cache. The check after the
+# LLVM step fails if x.py selected an archive of a different commit.
+COPY rust-dev-beta-x86_64-unknown-linux-gnu.tar.xz \
+     build/cache/llvm-${CI_LLVM_COMMIT}-false/
+# Three layers (LLVM, compiler, library and tools), so a change to a later
+# step does not rebuild an earlier one.
 RUN git config --global --add safe.directory '*' \
- && ./x.py build --jobs ${BUILD_JOBS} src/llvm-project
+ && ./x.py build --jobs ${BUILD_JOBS} src/llvm-project \
+ && test "$(ls build/cache | grep -c '^llvm-')" = 1
 RUN ./x.py build --jobs ${BUILD_JOBS} --stage 1 compiler
 # Library and tools in ONE invocation: x.py reassembles the stage-1 sysroot
 # at the start of every invocation, so a separate tool build would wipe the
@@ -132,12 +141,15 @@ RUN set -eux; \
         COPYRIGHT LICENSE-APACHE LICENSE-MIT LICENSES "$out/share/doc/rust/"; \
     cp -a "$S0/share/doc/cargo/." "$out/share/doc/cargo/"; \
     cp "$S0/share/doc/rust/COPYRIGHT.html" "$out/share/doc/cargo/BOOTSTRAP-COPYRIGHT.html"; \
-    cp src/llvm-project/llvm/LICENSE.TXT "$out/share/doc/rust/LLVM-LICENSE.txt"; \
+    tar -xJOf build/cache/llvm-${CI_LLVM_COMMIT}-false/rust-dev-beta-x86_64-unknown-linux-gnu.tar.xz \
+        rust-dev-beta-x86_64-unknown-linux-gnu/LICENSE.TXT \
+        > "$out/share/doc/rust/LLVM-LICENSE.txt"; \
     { printf 'rust '; git rev-parse HEAD; \
       printf 'libc '; git -C ../libc rev-parse HEAD; \
       printf 'cc-rs '; git -C ../cc-rs rev-parse HEAD; \
       printf 'backtrace '; git -C library/backtrace rev-parse HEAD; \
-      printf 'llvm '; git -C src/llvm-project rev-parse HEAD; \
+      printf 'llvm '; git rev-parse HEAD:src/llvm-project; \
+      printf 'llvm-build %s\n' "${CI_LLVM_COMMIT}"; \
     } > "$out/share/doc/rust/SOURCES.txt"; \
     sha256sum /work/rust-port/rust-qnx650.patch /work/rust-port/libc-qnx650.patch \
         /work/rust-port/cc-qnx650.patch /work/rust-port/backtrace-qnx650.patch \

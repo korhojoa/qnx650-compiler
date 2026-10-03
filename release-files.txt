@@ -75,6 +75,7 @@ scripts/link-qnx-exe.sh
 scripts/link-qnx-shared.sh
 scripts/link-qnx.sh
 scripts/publish-compiler.sh
+scripts/refuse-uncached-step.sh
 sources.manifest
 tests/check-compiler-image.sh
 tests/compiler-probe.rs

@@ -6,8 +6,9 @@ installer-answers.txt
 gcc-work/
 rust-work/
 
-# fetch-inputs.sh downloads this archive and checks it against sources.manifest.
+# fetch-inputs.sh downloads these archives and checks them against sources.manifest.
 Python-2.7.18.tgz
+rust-dev-beta-x86_64-unknown-linux-gnu.tar.xz
 
 # Local analysis cache.
 .ruff_cache/

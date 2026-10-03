@@ -6,10 +6,7 @@ change-id = 999999
 target = ["x86_64-unknown-linux-gnu", "i586-pc-nto-qnx650", "armv7-unknown-nto-qnx650"]
 
 [llvm]
-download-ci-llvm = false
-targets = "ARM;X86"
-experimental-targets = ""
-link-shared = true
+download-ci-llvm = true
 
 [rust]
 incremental = true

@@ -22,6 +22,16 @@ The build also runs the compiler image tests.
 The tests compile a Rust shared library with allocation and panic unwinding.
 An unknown runtime import causes a link failure.
 
+The Rust stage does not compile LLVM. It uses the LLVM archive that the Rust
+CI built for the pinned Rust release. `fetch-inputs.sh` downloads the archive
+and compares it with the SHA-256 in `sources.manifest`.
+
+The Rust CI server removes the archive on 2027-02-26.
+Set `INPUT_CACHE` to a directory to keep the downloaded archives between runs.
+The workflow keeps them in the tool cache of the runner.
+Without the archive, use a newer Rust release, or set
+`download-ci-llvm = false` in `rust-port/bootstrap.toml` to compile LLVM.
+
 The optional `COMPILER_BUILD_BASE` variable selects an existing GNU build image.
 This variable permits reuse of local build inputs.
 The GitHub workflow uses the complete source build.
@@ -86,15 +96,28 @@ the measured growth of a cold build, and prints each run's growth after
 the build.
 The local source build and a GitHub workflow run are separate tests.
 
+The `rebuild` input gives the stages that can build without the layer cache.
+The default value is `none`. With this value, only the final image stage can
+build. If a step of an earlier stage has no cached layer, the run stops at
+that step. The value `rust` also lets the Rust stage build. The value `all`
+lets each stage build. Use `all` for the first run on a new runner.
+
+The `REBUILD` variable gives the same selection to
+`scripts/build-compiler-image.sh`. Its default value is `all`.
+
+The layer cache of a `COPY` step includes the file modes. A source tree with
+other file modes than the runner workspace does not use the same layers.
+
 1. Open the `compiler image` workflow in GitHub Actions.
 2. Select the default branch.
 3. Select the `qnx650-compiler` runner label.
-4. Set `publish` to `true` and run the workflow.
-5. Inspect the compiler build and test results.
-6. Record the printed image digest.
-7. After the first upload, set the package visibility to Public.
-8. Run the `public image check` workflow with the printed digest.
-9. Use that digest in each consumer pipeline.
+4. Set `rebuild` to the stages that the change rebuilds.
+5. Set `publish` to `true` and run the workflow.
+6. Inspect the compiler build and test results.
+7. Record the printed image digest.
+8. After the first upload, set the package visibility to Public.
+9. Run the `public image check` workflow with the printed digest.
+10. Use that digest in each consumer pipeline.
 
 Set `publish` to `false` for a build check without an upload.
 The image name is `ghcr.io/<owner>/qnx650-compiler:sha-<commit>`.

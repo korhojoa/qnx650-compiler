@@ -6,8 +6,19 @@
 # needs that 17 MB archive in the build context. A binary of that size does
 # not belong in git. Its URL and SHA-256 are in sources.manifest, and this
 # script fetches it again when it is missing or does not match.
+#
+# INPUT_CACHE gives a directory that keeps the archives between runs. For an
+# archive in that directory, a download is not necessary. The Rust CI LLVM
+# archive must come from that directory after the upstream server removes it.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
+cache=${INPUT_CACHE:-}
+
+keep() {
+    [ -n "$cache" ] || return 0
+    mkdir -p "$cache"
+    cmp -s "$1" "$cache/$2" || cp "$1" "$cache/$2"
+}
 
 while IFS='|' read -r name kind dir _rev url _mirror; do
     case "$name" in \#*|"") continue ;; esac
@@ -19,12 +30,20 @@ while IFS='|' read -r name kind dir _rev url _mirror; do
     grep -qE "^COPY +$dir" "$HERE"/Dockerfile* 2>/dev/null || continue
     case "$url" in http*) ;; *) continue ;; esac
     f="$HERE/$dir"
+    if [ ! -f "$f" ] && [ -n "$cache" ] && [ -f "$cache/$dir" ]; then
+        cp "$cache/$dir" "$f"
+    fi
     if [ -f "$f" ]; then
-        "$HERE/verify-sha.sh" "$f" && echo "ok       $dir" && continue
+        if "$HERE/verify-sha.sh" "$f"; then
+            keep "$f" "$dir"
+            echo "ok       $dir"
+            continue
+        fi
         echo "re-fetching $dir (failed verification)" >&2; rm -f "$f"
     fi
     echo ">> $dir"
     curl -fsSL -o "$f" "$url"
     "$HERE/verify-sha.sh" "$f" || { echo "FATAL: $dir does not match its pin" >&2; exit 1; }
+    keep "$f" "$dir"
     echo "fetched  $dir"
 done < "$HERE/sources.manifest"
